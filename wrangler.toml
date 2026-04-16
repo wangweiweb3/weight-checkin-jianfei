@@ -1,0 +1,15 @@
+name = "weight-checkin-jianfei"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Pages with D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "weight-checkin-db"
+database_id = "your-database-id-here"
+
+# Build settings
+[build]
+command = "npm run build"
+
+[site]
+bucket = "dist"

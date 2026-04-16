@@ -375,6 +375,9 @@ function getFoodAdvice(log, profile) {
   return `今天剩余可用热量只有约 ${Math.max(0, remaining).toFixed(0)} kcal，后面以蛋白+蔬菜为主。`;
 }
 
+const CLOUD_SYNC_ENABLED = true;
+const API_BASE_URL = '';
+
 export default function App() {
   const [state, setState] = useState(getDefaultState);
   const [foodDraft, setFoodDraft] = useState({
@@ -385,6 +388,8 @@ export default function App() {
     customKcal: "",
   });
   const [showResetModal, setShowResetModal] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle');
+  const [userId, setUserId] = useState('default');
   const importRef = useRef(null);
 
   const handleReset = () => {
@@ -398,10 +403,62 @@ export default function App() {
     }
   };
 
+  const syncToCloud = async (data) => {
+    if (!CLOUD_SYNC_ENABLED) return;
+    setSyncStatus('syncing');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (response.ok) {
+        setSyncStatus('synced');
+        setTimeout(() => setSyncStatus('idle'), 2000);
+      } else {
+        setSyncStatus('error');
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      setSyncStatus('error');
+    }
+  };
+
+  const syncFromCloud = async () => {
+    if (!CLOUD_SYNC_ENABLED) return;
+    setSyncStatus('loading');
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`);
+      if (response.ok) {
+        const cloudData = await response.json();
+        if (cloudData && Object.keys(cloudData).length > 0) {
+          setState(prev => ({ ...getDefaultState(), ...cloudData }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+        }
+        setSyncStatus('synced');
+        setTimeout(() => setSyncStatus('idle'), 2000);
+      }
+    } catch (error) {
+      console.error('Load from cloud error:', error);
+      setSyncStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    const storedUserId = localStorage.getItem('user_id');
+    if (storedUserId) setUserId(storedUserId);
+  }, []);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState({ ...getDefaultState(), ...JSON.parse(raw) });
+      if (raw) {
+        const localData = JSON.parse(raw);
+        setState({ ...getDefaultState(), ...localData });
+      }
+      if (CLOUD_SYNC_ENABLED) {
+        syncFromCloud();
+      }
     } catch (e) {
       console.error(e);
     }
@@ -410,6 +467,10 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      if (CLOUD_SYNC_ENABLED) {
+        const timeoutId = setTimeout(() => syncToCloud(state), 1000);
+        return () => clearTimeout(timeoutId);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -988,6 +1049,46 @@ export default function App() {
           <label className="col-span-2 rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">API Key（占位）</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={ai.apiKey} onChange={(e) => updateAI("apiKey", e.target.value)} placeholder="当前仅预留，不会直接调用" /></label>
         </div>
         <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-3 text-sm text-amber-800">当前版本已经是可部署的前端 SPA，本地状态可联动。后续如果要云同步，优先建议轻量方案：Cloudflare D1 / KV 或 SQLite/Turso，不需要上常规重数据库。</div>
+      </GlassCard>
+
+      <GlassCard>
+        <div className="mb-3 text-lg font-semibold">云端同步</div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">同步状态</span>
+            <span className={`text-sm font-medium ${
+              syncStatus === 'synced' ? 'text-emerald-600' :
+              syncStatus === 'syncing' || syncStatus === 'loading' ? 'text-blue-600' :
+              syncStatus === 'error' ? 'text-red-600' : 'text-gray-600'
+            }`}>
+              {syncStatus === 'idle' && '就绪'}
+              {syncStatus === 'syncing' && '同步中...'}
+              {syncStatus === 'loading' && '加载中...'}
+              {syncStatus === 'synced' && '已同步'}
+              {syncStatus === 'error' && '同步失败'}
+            </span>
+          </div>
+          <label className="block rounded-2xl bg-gray-50 p-3">
+            <div className="mb-1 text-sm text-gray-500">用户ID（多设备同步用）</div>
+            <input 
+              className="w-full rounded-xl border border-gray-200 px-3 py-2" 
+              value={userId} 
+              onChange={(e) => {
+                setUserId(e.target.value);
+                localStorage.setItem('user_id', e.target.value);
+              }} 
+              placeholder="输入相同ID可在多设备同步"
+            />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <button onClick={syncFromCloud} className="flex items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200">
+              <Upload className="h-4 w-4" /> 从云端加载
+            </button>
+            <button onClick={() => syncToCloud(state)} className="flex items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white hover:bg-gray-800">
+              <Download className="h-4 w-4" /> 同步到云端
+            </button>
+          </div>
+        </div>
       </GlassCard>
 
       <GlassCard>
