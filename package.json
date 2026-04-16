@@ -6,18 +6,21 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "npm run build && wrangler dev",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
+    "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
-    "lucide-react": "latest",
     "tailwindcss": "latest"
   },
   "devDependencies": {
-    "vite": "latest",
+    "@cloudflare/vite-plugin": "^1.32.3",
+    "@tailwindcss/vite": "latest",
     "@vitejs/plugin-react": "latest",
-    "@tailwindcss/vite": "latest"
+    "vite": "latest",
+    "wrangler": "^4.83.0"
   }
 }
