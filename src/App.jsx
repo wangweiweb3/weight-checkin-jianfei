@@ -1077,15 +1077,19 @@ export default function App() {
     </div>
   );
 
+  // SettingsPage 使用独立的状态管理，避免输入时重新渲染
   const SettingsPage = () => {
-    const [localProfile, setLocalProfile] = useState(profile);
+    // 使用 ref 来保存输入值，避免重新渲染
+    const startDateRef = useRef(profile.startDate);
+    const totalDaysRef = useRef(profile.totalDays);
+    const startWeightRef = useRef(profile.startWeight);
+    const targetWeightRef = useRef(profile.targetWeight);
     
-    const handleProfileChange = (key, value) => {
-      setLocalProfile(prev => ({ ...prev, [key]: value }));
-    };
-    
-    const handleProfileBlur = (key, value) => {
-      updateProfile(key, value);
+    const handleSave = () => {
+      updateProfile("startDate", startDateRef.current);
+      updateProfile("totalDays", Number(totalDaysRef.current) || 120);
+      updateProfile("startWeight", Number(startWeightRef.current) || 80);
+      updateProfile("targetWeight", Number(targetWeightRef.current) || 75);
     };
     
     return (
@@ -1093,13 +1097,14 @@ export default function App() {
       <GlassCard>
         <div className="mb-3 text-lg font-semibold">目标设置</div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">开始日期</div><input type="date" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startDate} onBlur={(e) => updateProfile("startDate", e.target.value)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">计划天数</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.totalDays} onBlur={(e) => updateProfile("totalDays", Number(e.target.value) || 120)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">起始体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startWeight} onBlur={(e) => updateProfile("startWeight", Number(e.target.value) || 80)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标减重 kg</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={(profile.startWeight - profile.targetWeight).toFixed(1)} onBlur={(e) => setGoalLoss(e.target.value)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.targetWeight} onBlur={(e) => updateProfile("targetWeight", Number(e.target.value) || 75)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">开始日期</div><input type="date" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startDate} onChange={(e) => { startDateRef.current = e.target.value; }} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">计划天数</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.totalDays} onChange={(e) => { totalDaysRef.current = e.target.value; }} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">起始体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startWeight} onChange={(e) => { startWeightRef.current = e.target.value; }} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标减重 kg</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={(profile.startWeight - profile.targetWeight).toFixed(1)} onChange={(e) => { const loss = Number(e.target.value) || 5; targetWeightRef.current = Number((profile.startWeight - loss).toFixed(1)); }} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.targetWeight} onChange={(e) => { targetWeightRef.current = e.target.value; }} /></label>
           <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">结束日期（联动）</div><div className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">{planEndDate}</div></label>
         </div>
+        <button onClick={handleSave} className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white">保存设置</button>
       </GlassCard>
 
       <GlassCard>
