@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   LineChart,
   Line,
@@ -1077,8 +1077,8 @@ export default function App() {
     </div>
   );
 
-  // SettingsPage 使用独立的状态管理，避免输入时重新渲染
-  const SettingsPage = () => {
+  // SettingsPage - 使用 useCallback 缓存组件，避免重新渲染导致输入框失去焦点
+  const SettingsPage = useCallback(() => {
     // 使用 ref 来保存输入值，避免重新渲染
     const startDateRef = useRef(profile.startDate);
     const totalDaysRef = useRef(profile.totalDays);
@@ -1213,7 +1213,7 @@ export default function App() {
       )}
     </div>
   );
-  };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
