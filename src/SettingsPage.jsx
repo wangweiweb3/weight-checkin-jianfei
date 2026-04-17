@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import React, { useState } from "react";
 import { GlassCard } from "./App";
-import { Sparkles, Download, Upload, AlertCircle } from "lucide-react";
+import { Sparkles, Download, Upload, AlertCircle, Save } from "lucide-react";
 
 export default function SettingsPage({
   profile,
@@ -20,23 +20,23 @@ export default function SettingsPage({
   importRef,
   onImportData,
 }) {
-  // 使用 ref 来保存输入值，避免重新渲染
-  const startDateRef = useRef(profile.startDate);
-  const totalDaysRef = useRef(profile.totalDays);
-  const startWeightRef = useRef(profile.startWeight);
-  const targetWeightRef = useRef(profile.targetWeight);
+  // 本地状态 - 完全独立，不监听外部变化
+  const [localStartDate, setLocalStartDate] = useState(profile.startDate);
+  const [localTotalDays, setLocalTotalDays] = useState(profile.totalDays);
+  const [localStartWeight, setLocalStartWeight] = useState(profile.startWeight);
+  const [localTargetWeight, setLocalTargetWeight] = useState(profile.targetWeight);
+  const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
-    onUpdateProfile("startDate", startDateRef.current);
-    onUpdateProfile("totalDays", Number(totalDaysRef.current) || 120);
-    onUpdateProfile("startWeight", Number(startWeightRef.current) || 80);
-    onUpdateProfile("targetWeight", Number(targetWeightRef.current) || 75);
+    onUpdateProfile("startDate", localStartDate);
+    onUpdateProfile("totalDays", Number(localTotalDays) || 120);
+    onUpdateProfile("startWeight", Number(localStartWeight) || 80);
+    onUpdateProfile("targetWeight", Number(localTargetWeight) || 75);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
   };
 
-  const setGoalLoss = (val) => {
-    const loss = Number(val) || 5;
-    targetWeightRef.current = Number((profile.startWeight - loss).toFixed(1));
-  };
+  const goalLoss = (localStartWeight - localTargetWeight).toFixed(1);
 
   return (
     <div className="space-y-4">
@@ -48,47 +48,51 @@ export default function SettingsPage({
             <input
               type="date"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
-              defaultValue={profile.startDate}
-              onChange={(e) => { startDateRef.current = e.target.value; }}
+              value={localStartDate}
+              onChange={(e) => setLocalStartDate(e.target.value)}
             />
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
             <div className="mb-1 text-sm text-gray-500">计划天数</div>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
-              defaultValue={profile.totalDays}
-              onChange={(e) => { totalDaysRef.current = e.target.value; }}
+              value={localTotalDays}
+              onChange={(e) => setLocalTotalDays(e.target.value)}
             />
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
             <div className="mb-1 text-sm text-gray-500">起始体重</div>
             <input
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
-              defaultValue={profile.startWeight}
-              onChange={(e) => { startWeightRef.current = e.target.value; }}
+              value={localStartWeight}
+              onChange={(e) => setLocalStartWeight(e.target.value)}
             />
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
             <div className="mb-1 text-sm text-gray-500">目标减重 kg</div>
             <input
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
-              defaultValue={(profile.startWeight - profile.targetWeight).toFixed(1)}
-              onChange={(e) => setGoalLoss(e.target.value)}
+              value={goalLoss}
+              onChange={(e) => {
+                const loss = Number(e.target.value) || 0;
+                setLocalTargetWeight(Number((localStartWeight - loss).toFixed(1)));
+              }}
             />
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
             <div className="mb-1 text-sm text-gray-500">目标体重</div>
             <input
-              type="number"
-              step="0.1"
+              type="text"
+              inputMode="decimal"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
-              defaultValue={profile.targetWeight}
-              onChange={(e) => { targetWeightRef.current = e.target.value; }}
+              value={localTargetWeight}
+              onChange={(e) => setLocalTargetWeight(e.target.value)}
             />
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
@@ -100,9 +104,10 @@ export default function SettingsPage({
         </div>
         <button
           onClick={handleSave}
-          className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white"
+          className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white flex items-center justify-center gap-2"
         >
-          保存设置
+          <Save className="h-4 w-4" />
+          {saved ? "已保存！" : "保存设置"}
         </button>
       </GlassCard>
 

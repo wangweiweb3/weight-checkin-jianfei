@@ -37,6 +37,7 @@ import {
   PanelTop,
 } from "lucide-react";
 import SettingsPage from "./SettingsPage";
+import CheckinPage from "./CheckinPage";
 
 const STORAGE_KEY = "mobile-weight-loss-checkin-app-v6";
 
@@ -351,7 +352,7 @@ export function GlassCard({ children, className = "" }) {
   return <div className={`rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-black/5 ${className}`}>{children}</div>;
 }
 
-function MetricCard({ title, value, sub, icon: Icon, tone = "light" }) {
+export function MetricCard({ title, value, sub, icon: Icon, tone = "light" }) {
   const tones = {
     light: "bg-white text-gray-900 ring-black/5",
     dark: "bg-gray-900 text-white ring-gray-900",
@@ -406,11 +407,11 @@ function getFoodAdvice(log, profile) {
     return `午餐建议控制在 ${Math.max(400, Math.min(550, remaining - 350))} kcal 左右，优先鸡肉/豆腐 + 蔬菜 + 少量主食。`;
   }
   if (remaining >= 450) return `今天还比较充裕，剩余可用热量约 ${remaining.toFixed(0)} kcal，下一顿按计划吃即可。`;
-  if (remaining >= 250) return `今天剩余可用热量约 ${remaining.toFixed(0)} kcal，下一顿请用“收紧版晚餐”。`;
+  if (remaining >= 250) return `今天剩余可用热量约 ${remaining.toFixed(0)} kcal，下一顿请用"收紧版晚餐"。`;
   return `今天剩余可用热量只有约 ${Math.max(0, remaining).toFixed(0)} kcal，后面以蛋白+蔬菜为主。`;
 }
 
-const CLOUD_SYNC_ENABLED = true;
+const CLOUD_SYNC_ENABLED = true; // 启用云同步功能
 const API_BASE_URL = '';
 
 export default function App() {
@@ -511,18 +512,16 @@ export default function App() {
     }
   }, []);
 
+  // 自动保存到 localStorage
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      if (CLOUD_SYNC_ENABLED) {
-        const timeoutId = setTimeout(() => syncToCloud(state), 1000);
-        return () => clearTimeout(timeoutId);
-      }
     } catch (e) {
       console.error(e);
     }
   }, [state]);
 
+  // 定时器：每分钟检查是否需要自动切换日期
   useEffect(() => {
     const tick = () => setState((prev) => applyRollover(prev, todayStr()));
     tick();
@@ -671,9 +670,17 @@ export default function App() {
   const updateActiveLog = (patchOrUpdater, options = {}) => updateLogForDate(activeDate, patchOrUpdater, options);
   const updateSelectedLog = (patchOrUpdater, options = {}) => updateLogForDate(selectedDate, patchOrUpdater, options);
 
-  const updateProfile = (key, value) => setState((prev) => ({ ...prev, profile: { ...prev.profile, [key]: value } }));
-  const updateAI = (key, value) => setState((prev) => ({ ...prev, ai: { ...prev.ai, [key]: value } }));
-  const setGoalLoss = (kg) => updateProfile("targetWeight", Number((profile.startWeight - (Number(kg) || 0)).toFixed(1)));
+  const updateProfile = useCallback((key, value) => setState((prev) => ({ ...prev, profile: { ...prev.profile, [key]: value } })), []);
+  const updateAI = useCallback((key, value) => setState((prev) => ({ ...prev, ai: { ...prev.ai, [key]: value } })), []);
+  const setGoalLoss = useCallback((kg) => {
+    setState((prev) => ({ 
+      ...prev, 
+      profile: { 
+        ...prev.profile, 
+        targetWeight: Number((prev.profile.startWeight - (Number(kg) || 0)).toFixed(1)) 
+      } 
+    }));
+  }, []);
 
   const completeNextMealActive = () => {
     const key = getNextMealKey(activeLog);
@@ -959,95 +966,6 @@ export default function App() {
     );
   };
 
-  const CheckinPage = () => {
-    const remainingUpper = Math.max(0, selectedMaxKcal - selectedMealTotals.total);
-    const overUpper = Math.max(0, selectedMealTotals.total - selectedMaxKcal);
-    const belowMin = Math.max(0, selectedMinKcal - selectedMealTotals.total);
-
-    return (
-      <div className="space-y-4">
-        <GlassCard>
-          <div className="flex items-center justify-between">
-            <button className="rounded-2xl bg-gray-100 p-2" onClick={() => goDate(-1)}><ChevronLeft className="h-5 w-5" /></button>
-            <div className="text-center">
-              <input type="date" className="rounded-2xl border border-gray-200 px-3 py-2 text-sm" value={selectedDate} min={planDates[0]} max={planDates[planDates.length - 1]} onChange={(e) => setState((prev) => ({ ...prev, selectedDate: e.target.value }))} />
-              <div className="mt-2 text-sm text-gray-500">第 {selectedIndex + 1} / {profile.totalDays} 天</div>
-            </div>
-            <button className="rounded-2xl bg-gray-100 p-2" onClick={() => goDate(1)}><ChevronRight className="h-5 w-5" /></button>
-          </div>
-        </GlassCard>
-
-        <GlassCard>
-          <div className="mb-3 text-lg font-semibold">今天打卡</div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">晨起体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={selectedLog.weight} onChange={(e) => updateSelectedLog({ weight: e.target.value === "" ? "" : Number(e.target.value) }, { skipAutoAdvance: true })} /></label>
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">喝水（L）</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={selectedLog.water} onChange={(e) => updateSelectedLog({ water: e.target.value === "" ? 0 : Number(e.target.value) }, { skipAutoAdvance: true })} /></label>
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">步行分钟</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={selectedLog.walkMinutes} onChange={(e) => updateSelectedLog({ walkMinutes: e.target.value === "" ? 0 : Number(e.target.value) }, { skipAutoAdvance: true })} /></label>
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">足跟痛（0-10）</div><input type="range" min="0" max="10" className="w-full" value={selectedLog.heelPain} onChange={(e) => updateSelectedLog({ heelPain: Number(e.target.value) }, { skipAutoAdvance: true })} /><div className="text-sm font-medium">{selectedLog.heelPain}</div></label>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            {[["breakfastDone","早餐按计划"],["lunchDone","午餐按计划"],["dinnerDone","晚餐按计划"],["dinnerCarbControlled","晚餐主食守住"],["noAlcohol","无酒精"],["noSugaryDrinks","无甜饮料"]].map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-3"><input type="checkbox" checked={Boolean(selectedLog[key])} onChange={(e) => updateSelectedLog({ [key]: e.target.checked })} /><span>{label}</span></label>
-            ))}
-          </div>
-
-          <div className="mt-4">
-            <div className="mb-2 text-sm text-gray-500">运动完成情况（与首页联动）</div>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              {EXERCISE_OPTIONS.map((item) => (
-                <button key={item.key} onClick={() => toggleExerciseForDate(selectedDate, item.key)} className={`rounded-2xl px-3 py-3 text-left ${selectedLog[item.key] ? "bg-emerald-50 text-emerald-800" : "bg-gray-50 text-gray-800"}`}>
-                  <div className="font-medium">{item.label}</div>
-                  <div className="text-xs">{selectedLog[item.key] ? "已完成" : "点此完成"}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-        </GlassCard>
-
-        <GlassCard>
-          <div className="flex items-center justify-between"><div><div className="text-lg font-semibold">食物记录</div><div className="text-sm text-gray-500">偏离计划时也能记录，并显示剩余热量</div></div><UtensilsCrossed className="h-5 w-5 text-gray-400" /></div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">餐次</div><select className="w-full rounded-xl border border-gray-200 px-3 py-2" value={foodDraft.mealType} onChange={(e) => setFoodDraft((prev) => ({ ...prev, mealType: e.target.value }))}><option value="breakfast">早餐</option><option value="lunch">午餐</option><option value="dinner">晚餐</option><option value="snack">加餐</option></select></label>
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">食物</div><select className="w-full rounded-xl border border-gray-200 px-3 py-2" value={foodDraft.presetId} onChange={(e) => setFoodDraft((prev) => ({ ...prev, presetId: e.target.value }))}>{FOOD_PRESETS.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}<option value="custom">自定义输入</option></select></label>
-          </div>
-
-          {foodDraft.presetId === "custom" ? (
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">自定义食物名</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={foodDraft.customName} onChange={(e) => setFoodDraft((prev) => ({ ...prev, customName: e.target.value }))} /></label>
-              <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">每份估算 kcal</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={foodDraft.customKcal} onChange={(e) => setFoodDraft((prev) => ({ ...prev, customKcal: e.target.value }))} /></label>
-            </div>
-          ) : (
-            <div className="mt-3 rounded-2xl bg-gray-50 px-3 py-3 text-sm text-gray-600">{(() => { const preset = FOOD_PRESETS.find((f) => f.id === foodDraft.presetId); return preset ? `基准：${preset.baseLabel} ≈ ${preset.kcal} kcal${preset.note ? `；${preset.note}` : ""}` : ""; })()}</div>
-          )}
-
-          <div className="mt-3 grid grid-cols-[1fr_auto] gap-3">
-            <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">份数</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={foodDraft.qty} onChange={(e) => setFoodDraft((prev) => ({ ...prev, qty: e.target.value }))} /></label>
-            <button onClick={addFoodEntry} className="rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white self-end">添加</button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <MetricCard title="今日已记录" value={`${selectedMealTotals.total.toFixed(0)} kcal`} sub={`目标 ${selectedMinKcal}–${selectedMaxKcal} kcal`} icon={Flame} tone="soft" />
-            <MetricCard title="剩余卡路里" value={overUpper > 0 ? `+${overUpper.toFixed(0)} kcal` : `${remainingUpper.toFixed(0)} kcal`} sub={overUpper > 0 ? "已超过上限" : "到上限还剩"} icon={PanelTop} tone={overUpper > 0 ? "warn" : "soft"} />
-          </div>
-          <div className="mt-3 rounded-2xl bg-gray-50 p-3 text-sm text-gray-700">{selectedMealTotals.total < selectedMinKcal ? `距离建议下限还差约 ${belowMin.toFixed(0)} kcal；` : "已达到建议下限；"} 餐次拆分：早 {selectedMealTotals.breakfast.toFixed(0)} / 午 {selectedMealTotals.lunch.toFixed(0)} / 晚 {selectedMealTotals.dinner.toFixed(0)} / 加 {selectedMealTotals.snack.toFixed(0)} kcal</div>
-          <div className="mt-3 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-800"><div className="font-medium text-emerald-900">下一顿建议</div><div className="mt-1">{checkinFoodAdvice}</div></div>
-
-          <div className="mt-4 space-y-2">
-            {(selectedLog.mealEntries || []).length ? (selectedLog.mealEntries || []).map((item, index) => (
-              <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-gray-50 px-3 py-3">
-                <div><div className="font-medium">{item.name}</div><div className="text-xs text-gray-500">{item.mealType} · {item.qty} × {item.baseLabel} · {item.kcal} kcal{item.note ? ` · ${item.note}` : ""}</div></div>
-                <button onClick={() => removeFoodEntry(index)} className="rounded-xl bg-white p-2 text-gray-500 ring-1 ring-black/5"><Trash2 className="h-4 w-4" /></button>
-              </div>
-            )) : <div className="rounded-2xl bg-gray-50 px-3 py-3 text-sm text-gray-500">今天还没有记录食物。比如“50ml牛奶 + 山东杂粮煎饼”，可以直接添加两条。</div>}
-          </div>
-        </GlassCard>
-
-        <button onClick={finalizeSelectedDay} className="w-full rounded-3xl bg-gray-900 px-4 py-4 font-medium text-white">完成今天并进入下一天</button>
-      </div>
-    );
-  };
-
   const PlanPage = () => (
     <div className="space-y-4">
       <GlassCard><div className="flex items-center justify-between"><div><div className="text-lg font-semibold">最终版饮食计划</div><div className="text-sm text-gray-500">不用再回聊天记录里翻</div></div><Target className="h-5 w-5 text-gray-400" /></div></GlassCard>
@@ -1082,7 +1000,22 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="mx-auto max-w-md px-4 pb-28 pt-4">
         {activeTab === "home" && <HomePage />}
-        {activeTab === "checkin" && <CheckinPage />}
+        {activeTab === "checkin" && (
+          <CheckinPage
+            profile={profile}
+            selectedDate={selectedDate}
+            selectedLog={selectedLog}
+            selectedIndex={selectedIndex}
+            planDates={planDates}
+            selectedMinKcal={selectedMinKcal}
+            selectedMaxKcal={selectedMaxKcal}
+            selectedMealTotals={selectedMealTotals}
+            onUpdateLog={updateSelectedLog}
+            onToggleExercise={toggleExerciseForDate}
+            onGoDate={goDate}
+            onSetSelectedDate={(date) => setState(prev => ({ ...prev, selectedDate: date }))}
+          />
+        )}
         {activeTab === "plan" && <PlanPage />}
         {activeTab === "weekly" && <WeeklyPage />}
         {activeTab === "settings" && (
