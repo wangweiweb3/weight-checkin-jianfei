@@ -269,6 +269,14 @@ function overCaloriesForDate(log, profile) {
   return Math.max(0, Math.round(total - maxKcal));
 }
 
+function underCaloriesForDate(log, profile) {
+  const total = groupMealCalories(log?.mealEntries || []).total;
+  const [, maxKcal] = getDailyTarget(profile, log || {});
+  // 只有当天有记录且低于上限时才计算缺口
+  if (total === 0) return 0;
+  return Math.max(0, Math.round(maxKcal - total));
+}
+
 function buildRolloverNotice(fromDate, toDate, logs, profile) {
   if (!fromDate || fromDate >= toDate) return "";
   let cursor = fromDate;
@@ -290,6 +298,32 @@ function buildRolloverNotice(fromDate, toDate, logs, profile) {
   if (incompleteDays > 0) parts.push(`过去 ${incompleteDays} 天未完成`);
   if (overDays > 0) parts.push(`过去 ${overDays} 天饮食超标共约 ${totalOver} kcal`);
   return `已切换到 ${toDate}。${parts.join("；")}。`;
+}
+
+function buildCalorieDeficitNotice(logs, profile, planDates, activeIndex) {
+  // 计算从开始到当前执行日的所有有记录天数
+  let recordedDays = 0;
+  let totalDeficit = 0;
+  
+  for (let i = 0; i <= activeIndex; i++) {
+    const date = planDates[i];
+    const log = logs[date];
+    if (log && log.mealEntries && log.mealEntries.length > 0) {
+      const deficit = underCaloriesForDate(log, profile);
+      if (deficit > 0) {
+        recordedDays += 1;
+        totalDeficit += deficit;
+      }
+    }
+  }
+  
+  if (recordedDays === 0 || totalDeficit === 0) return null;
+  
+  return {
+    days: recordedDays,
+    totalDeficit: totalDeficit,
+    message: `过去 ${recordedDays} 天你比系统推荐的总摄入低 ${totalDeficit} kcal，继续保持！`
+  };
 }
 
 function applyRollover(prev, systemDate) {
@@ -564,6 +598,11 @@ export default function App() {
   const [selectedMinKcal, selectedMaxKcal] = getDailyTarget(profile, selectedLog);
   const homeFoodAdvice = getFoodAdvice(activeLog, profile);
   const checkinFoodAdvice = getFoodAdvice(selectedLog, profile);
+  
+  // 卡路里缺口提示
+  const calorieDeficitNotice = useMemo(() => {
+    return buildCalorieDeficitNotice(logs, profile, planDates, activeIndex);
+  }, [logs, profile, planDates, activeIndex]);
 
   const expectedWeightToday = Number((profile.startWeight - totalGoalLoss * ((activeIndex + 1) / profile.totalDays)).toFixed(1));
   const paceGap = Number((currentWeight - expectedWeightToday).toFixed(1));
@@ -839,6 +878,7 @@ export default function App() {
 
         {rolloverNotice ? <GlassCard className="bg-amber-50 ring-amber-200"><div className="text-sm text-amber-800">{rolloverNotice}</div></GlassCard> : null}
         {lastAutoAdvanceNote ? <GlassCard className="bg-emerald-50 ring-emerald-200"><div className="text-sm text-emerald-800">{lastAutoAdvanceNote}</div></GlassCard> : null}
+        {calorieDeficitNotice ? <GlassCard className="bg-blue-50 ring-blue-200"><div className="text-sm text-blue-800">{calorieDeficitNotice.message}</div></GlassCard> : null}
 
         <GlassCard className="bg-emerald-50 ring-emerald-200">
           <div className="flex items-center justify-between"><div><div className="text-lg font-semibold text-emerald-900">目标反馈</div><div className="mt-1 text-sm text-emerald-800">{feedbackText}</div></div><Sparkles className="h-5 w-5 text-emerald-700" /></div>
@@ -1037,16 +1077,27 @@ export default function App() {
     </div>
   );
 
-  const SettingsPage = () => (
+  const SettingsPage = () => {
+    const [localProfile, setLocalProfile] = useState(profile);
+    
+    const handleProfileChange = (key, value) => {
+      setLocalProfile(prev => ({ ...prev, [key]: value }));
+    };
+    
+    const handleProfileBlur = (key, value) => {
+      updateProfile(key, value);
+    };
+    
+    return (
     <div className="space-y-4">
       <GlassCard>
         <div className="mb-3 text-lg font-semibold">目标设置</div>
         <div className="grid grid-cols-2 gap-3">
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">开始日期</div><input type="date" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={profile.startDate} onChange={(e) => updateProfile("startDate", e.target.value)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">计划天数</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={profile.totalDays} onChange={(e) => updateProfile("totalDays", Number(e.target.value) || 90)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">起始体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={profile.startWeight} onChange={(e) => updateProfile("startWeight", Number(e.target.value) || 80)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标减重 kg</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={(profile.startWeight - profile.targetWeight).toFixed(1)} onChange={(e) => setGoalLoss(e.target.value)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" value={profile.targetWeight} onChange={(e) => updateProfile("targetWeight", Number(e.target.value) || 75)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">开始日期</div><input type="date" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startDate} onBlur={(e) => updateProfile("startDate", e.target.value)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">计划天数</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.totalDays} onBlur={(e) => updateProfile("totalDays", Number(e.target.value) || 120)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">起始体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startWeight} onBlur={(e) => updateProfile("startWeight", Number(e.target.value) || 80)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标减重 kg</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={(profile.startWeight - profile.targetWeight).toFixed(1)} onBlur={(e) => setGoalLoss(e.target.value)} /></label>
+          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.targetWeight} onBlur={(e) => updateProfile("targetWeight", Number(e.target.value) || 75)} /></label>
           <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">结束日期（联动）</div><div className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">{planEndDate}</div></label>
         </div>
       </GlassCard>
@@ -1157,6 +1208,7 @@ export default function App() {
       )}
     </div>
   );
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
