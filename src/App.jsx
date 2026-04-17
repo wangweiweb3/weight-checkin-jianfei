@@ -403,9 +403,12 @@ export default function App() {
     }
   };
 
+  const [syncError, setSyncError] = useState('');
+
   const syncToCloud = async (data) => {
     if (!CLOUD_SYNC_ENABLED) return;
     setSyncStatus('syncing');
+    setSyncError('');
     try {
       const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
         method: 'POST',
@@ -416,10 +419,13 @@ export default function App() {
         setSyncStatus('synced');
         setTimeout(() => setSyncStatus('idle'), 2000);
       } else {
+        const errorText = await response.text();
+        setSyncError(`同步失败: ${response.status} ${errorText}`);
         setSyncStatus('error');
       }
     } catch (error) {
       console.error('Sync error:', error);
+      setSyncError(`网络错误: ${error.message}`);
       setSyncStatus('error');
     }
   };
@@ -427,6 +433,7 @@ export default function App() {
   const syncFromCloud = async () => {
     if (!CLOUD_SYNC_ENABLED) return;
     setSyncStatus('loading');
+    setSyncError('');
     try {
       const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`);
       if (response.ok) {
@@ -437,9 +444,14 @@ export default function App() {
         }
         setSyncStatus('synced');
         setTimeout(() => setSyncStatus('idle'), 2000);
+      } else {
+        const errorText = await response.text();
+        setSyncError(`加载失败: ${response.status} ${errorText}`);
+        setSyncStatus('error');
       }
     } catch (error) {
       console.error('Load from cloud error:', error);
+      setSyncError(`网络错误: ${error.message}`);
       setSyncStatus('error');
     }
   };
@@ -1080,6 +1092,11 @@ export default function App() {
               placeholder="输入相同ID可在多设备同步"
             />
           </label>
+          {syncError && (
+            <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">
+              {syncError}
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <button onClick={syncFromCloud} className="flex items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200">
               <Upload className="h-4 w-4" /> 从云端加载
