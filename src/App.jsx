@@ -36,6 +36,7 @@ import {
   Sparkles,
   PanelTop,
 } from "lucide-react";
+import SettingsPage from "./SettingsPage";
 
 const STORAGE_KEY = "mobile-weight-loss-checkin-app-v6";
 
@@ -346,7 +347,7 @@ function applyRollover(prev, systemDate) {
   };
 }
 
-function GlassCard({ children, className = "" }) {
+export function GlassCard({ children, className = "" }) {
   return <div className={`rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-black/5 ${className}`}>{children}</div>;
 }
 
@@ -1077,144 +1078,6 @@ export default function App() {
     </div>
   );
 
-  // SettingsPage - 使用 useCallback 缓存组件，避免重新渲染导致输入框失去焦点
-  const SettingsPage = useCallback(() => {
-    // 使用 ref 来保存输入值，避免重新渲染
-    const startDateRef = useRef(profile.startDate);
-    const totalDaysRef = useRef(profile.totalDays);
-    const startWeightRef = useRef(profile.startWeight);
-    const targetWeightRef = useRef(profile.targetWeight);
-    
-    const handleSave = () => {
-      updateProfile("startDate", startDateRef.current);
-      updateProfile("totalDays", Number(totalDaysRef.current) || 120);
-      updateProfile("startWeight", Number(startWeightRef.current) || 80);
-      updateProfile("targetWeight", Number(targetWeightRef.current) || 75);
-    };
-    
-    return (
-    <div className="space-y-4">
-      <GlassCard>
-        <div className="mb-3 text-lg font-semibold">目标设置</div>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">开始日期</div><input type="date" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startDate} onChange={(e) => { startDateRef.current = e.target.value; }} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">计划天数</div><input type="number" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.totalDays} onChange={(e) => { totalDaysRef.current = e.target.value; }} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">起始体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.startWeight} onChange={(e) => { startWeightRef.current = e.target.value; }} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标减重 kg</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={(profile.startWeight - profile.targetWeight).toFixed(1)} onChange={(e) => { const loss = Number(e.target.value) || 5; targetWeightRef.current = Number((profile.startWeight - loss).toFixed(1)); }} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">目标体重</div><input type="number" step="0.1" className="w-full rounded-xl border border-gray-200 px-3 py-2" defaultValue={profile.targetWeight} onChange={(e) => { targetWeightRef.current = e.target.value; }} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">结束日期（联动）</div><div className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm">{planEndDate}</div></label>
-        </div>
-        <button onClick={handleSave} className="mt-4 w-full rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white">保存设置</button>
-      </GlassCard>
-
-      <GlassCard>
-        <div className="flex items-center justify-between"><div><div className="text-lg font-semibold">AI 热量估算预留</div><div className="text-sm text-gray-500">当前仍以手动模板为主</div></div><Sparkles className="h-5 w-5 text-gray-400" /></div>
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <label className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-3"><input type="checkbox" checked={ai.enabled} onChange={(e) => updateAI("enabled", e.target.checked)} /><span className="text-sm">启用预留配置</span></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">Provider</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={ai.provider} onChange={(e) => updateAI("provider", e.target.value)} /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">Endpoint</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={ai.endpoint} onChange={(e) => updateAI("endpoint", e.target.value)} placeholder="后续接你自己的服务或代理" /></label>
-          <label className="rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">Model</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={ai.model} onChange={(e) => updateAI("model", e.target.value)} placeholder="例如千帆里的模型名" /></label>
-          <label className="col-span-2 rounded-2xl bg-gray-50 p-3"><div className="mb-1 text-sm text-gray-500">API Key（占位）</div><input className="w-full rounded-xl border border-gray-200 px-3 py-2" value={ai.apiKey} onChange={(e) => updateAI("apiKey", e.target.value)} placeholder="当前仅预留，不会直接调用" /></label>
-        </div>
-        <div className="mt-3 rounded-2xl bg-amber-50 px-3 py-3 text-sm text-amber-800">当前版本已经是可部署的前端 SPA，本地状态可联动。后续如果要云同步，优先建议轻量方案：Cloudflare D1 / KV 或 SQLite/Turso，不需要上常规重数据库。</div>
-      </GlassCard>
-
-      <GlassCard>
-        <div className="mb-3 text-lg font-semibold">云端同步</div>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">同步状态</span>
-            <span className={`text-sm font-medium ${
-              syncStatus === 'synced' ? 'text-emerald-600' :
-              syncStatus === 'syncing' || syncStatus === 'loading' ? 'text-blue-600' :
-              syncStatus === 'error' ? 'text-red-600' : 'text-gray-600'
-            }`}>
-              {syncStatus === 'idle' && '就绪'}
-              {syncStatus === 'syncing' && '同步中...'}
-              {syncStatus === 'loading' && '加载中...'}
-              {syncStatus === 'synced' && '已同步'}
-              {syncStatus === 'error' && '同步失败'}
-            </span>
-          </div>
-          <label className="block rounded-2xl bg-gray-50 p-3">
-            <div className="mb-1 text-sm text-gray-500">用户ID（多设备同步用）</div>
-            <input 
-              className="w-full rounded-xl border border-gray-200 px-3 py-2" 
-              value={userId} 
-              onChange={(e) => {
-                setUserId(e.target.value);
-                localStorage.setItem('user_id', e.target.value);
-              }} 
-              placeholder="输入相同ID可在多设备同步"
-            />
-          </label>
-          {syncError && (
-            <div className="rounded-2xl bg-red-50 p-3 text-sm text-red-700">
-              {syncError}
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={syncFromCloud} className="flex items-center justify-center gap-2 rounded-2xl bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200">
-              <Upload className="h-4 w-4" /> 从云端加载
-            </button>
-            <button onClick={() => syncToCloud(state)} className="flex items-center justify-center gap-2 rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white hover:bg-gray-800">
-              <Download className="h-4 w-4" /> 同步到云端
-            </button>
-          </div>
-        </div>
-      </GlassCard>
-
-      <GlassCard>
-        <div className="mb-3 text-lg font-semibold">备份</div>
-        <div className="grid grid-cols-2 gap-3">
-          <button onClick={exportData} className="flex items-center justify-center gap-2 rounded-3xl bg-gray-900 px-4 py-3 font-medium text-white"><Download className="h-4 w-4" /> 导出备份</button>
-          <button onClick={() => importRef.current?.click()} className="flex items-center justify-center gap-2 rounded-3xl bg-white px-4 py-3 font-medium text-gray-900 ring-1 ring-black/10"><Upload className="h-4 w-4" /> 导入备份</button>
-          <input ref={importRef} type="file" accept="application/json" className="hidden" onChange={importData} />
-        </div>
-      </GlassCard>
-
-      <GlassCard>
-        <div className="mb-2 text-lg font-semibold">近14天趋势</div>
-        <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="date" fontSize={12} /><YAxis yAxisId="left" fontSize={12} domain={["dataMin - 1", "dataMax + 1"]} /><YAxis yAxisId="right" orientation="right" fontSize={12} /><Tooltip /><Line yAxisId="left" type="monotone" dataKey="weight" strokeWidth={2.5} dot={false} connectNulls /><Line yAxisId="left" type="monotone" dataKey="avg7" strokeWidth={3.5} dot={false} connectNulls /><Line yAxisId="right" type="monotone" dataKey="walk" strokeWidth={2} dot={false} connectNulls /></LineChart></ResponsiveContainer></div>
-      </GlassCard>
-
-      <GlassCard className="border-red-200 bg-red-50">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-lg font-semibold text-red-900">重新初始化计划</div>
-            <div className="text-sm text-red-700">清空所有数据，回到第1天重新开始</div>
-          </div>
-          <AlertCircle className="h-5 w-5 text-red-600" />
-        </div>
-        <button onClick={() => setShowResetModal(true)} className="mt-4 w-full rounded-2xl bg-red-600 px-4 py-3 font-medium text-white hover:bg-red-700 active:bg-red-800 transition-colors">重新初始化</button>
-      </GlassCard>
-
-      {showResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-sm rounded-[28px] bg-white p-6 shadow-xl">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-                <AlertCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <div className="text-lg font-semibold text-gray-900">确认重置？</div>
-                <div className="text-sm text-gray-500">此操作不可撤销</div>
-              </div>
-            </div>
-            <div className="mt-4 text-sm text-gray-700 leading-relaxed">
-              重置后将清空所有打卡记录和体重数据，回到第1天重新开始。当前进度和 history 将全部丢失。
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setShowResetModal(false)} className="flex-1 rounded-2xl bg-gray-100 px-4 py-3 font-medium text-gray-700 hover:bg-gray-200 active:bg-gray-300 transition-colors">取消</button>
-              <button onClick={handleReset} className="flex-1 rounded-2xl bg-red-600 px-4 py-3 font-medium text-white hover:bg-red-700 active:bg-red-800 transition-colors">确认重置</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-  }, []);
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="mx-auto max-w-md px-4 pb-28 pt-4">
@@ -1222,7 +1085,29 @@ export default function App() {
         {activeTab === "checkin" && <CheckinPage />}
         {activeTab === "plan" && <PlanPage />}
         {activeTab === "weekly" && <WeeklyPage />}
-        {activeTab === "settings" && <SettingsPage />}
+        {activeTab === "settings" && (
+          <SettingsPage
+            profile={profile}
+            ai={ai}
+            planEndDate={planEndDate}
+            syncStatus={syncStatus}
+            syncError={syncError}
+            userId={userId}
+            onUpdateProfile={updateProfile}
+            onUpdateAI={updateAI}
+            onSetUserId={(val) => {
+              setUserId(val);
+              localStorage.setItem('user_id', val);
+            }}
+            onSyncFromCloud={syncFromCloud}
+            onSyncToCloud={() => syncToCloud(state)}
+            onExportData={exportData}
+            onImportClick={() => importRef.current?.click()}
+            onShowResetModal={() => setShowResetModal(true)}
+            importRef={importRef}
+            onImportData={importData}
+          />
+        )}
       </div>
       <div className="fixed bottom-0 left-0 right-0 border-t border-black/5 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-3">
