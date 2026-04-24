@@ -10,6 +10,7 @@ import {
   Zap,
   Utensils,
   Dumbbell,
+  Droplets,
 } from "lucide-react";
 
 function todayStr() {
@@ -59,7 +60,7 @@ function getFoodAdvice(log, profile) {
 }
 
 const EXERCISE_LIST = [
-  { key: "walkDone", label: "步行", icon: "🚶" },
+  { key: "walkDone", label: "快走", icon: "🚶" },
   { key: "sitStandDone", label: "站起", icon: "🪑" },
   { key: "wallPushupDone", label: "俯卧撑", icon: "💪" },
   { key: "stretchDone", label: "拉伸", icon: "🧘" },
@@ -278,15 +279,12 @@ export default function TodayPage({
                   ) : null}
                 </div>
                 <div className="flex flex-col items-end shrink-0">
-                  {mealKcal > 0 && (
-                    <div className="text-xs font-bold text-warning">{mealKcal}<span className="text-[9px] text-text-muted ml-0.5">kcal</span></div>
-                  )}
                   {done ? (
-                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success/20 mt-0.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success/20">
                       <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     </div>
                   ) : (
-                    <div className="rounded-full bg-surface-2 px-3 py-1 text-[10px] font-semibold text-text-muted mt-0.5">打卡</div>
+                    <div className="rounded-full bg-surface-2 px-3 py-1 text-[10px] font-semibold text-text-muted">打卡</div>
                   )}
                 </div>
               </button>
@@ -344,6 +342,30 @@ export default function TodayPage({
               </button>
             );
           })}
+        </div>
+      </div>
+
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-soft">
+            <Droplets className="h-3.5 w-3.5 text-cyan" />
+          </div>
+          <span className="text-sm font-semibold text-on-surface">今日饮水</span>
+        </div>
+        <div className="flex flex-col items-center py-2">
+          <div className="text-4xl font-black text-text-primary">{Math.round((selectedLog.water || 0) * 1000)}<span className="text-base font-semibold text-text-muted ml-1">ml</span></div>
+          {(() => {
+            const currentML = Math.round((selectedLog.water || 0) * 1000);
+            const minTarget = 1500;
+            const suggestTarget = 1800;
+            if (currentML >= suggestTarget) {
+              return <div className="mt-1.5 text-xs text-success font-semibold">已达标（建议{suggestTarget}ml）</div>;
+            } else if (currentML >= minTarget) {
+              return <div className="mt-1.5 text-xs text-warning font-semibold">已过最低线，还差{suggestTarget - currentML}ml达建议量</div>;
+            } else {
+              return <div className="mt-1.5 text-xs text-danger font-semibold">还差{minTarget - currentML}ml达最低量 / 还差{suggestTarget - currentML}ml达建议量</div>;
+            }
+          })()}
         </div>
       </div>
 
