@@ -105,12 +105,14 @@ function getNextMealLabel(log) {
 }
 
 function isDayComplete(log, profile) {
+  const waterML = (log?.water || 0) * 1000;
   return Boolean(
     log?.weight !== "" && log?.weight != null &&
       log?.breakfastDone &&
       log?.lunchDone &&
       log?.dinnerDone &&
-      anyExerciseDone(log)
+      anyExerciseDone(log) &&
+      waterML >= 1200
   );
 }
 
@@ -737,7 +739,8 @@ export default function App() {
       if (!log?.lunchDone) missing.push("午餐");
       if (!log?.dinnerDone) missing.push("晚餐");
       if (!anyExerciseDone(log)) missing.push("运动");
-      
+      if ((log?.water || 0) * 1000 < 1200) missing.push("喝水");
+
       setMissingModalItems(missing);
       setShowMissingModal(true);
       return;

@@ -320,6 +320,30 @@ export default function TodayPage({
       </div>
 
       <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-soft">
+            <Droplets className="h-3.5 w-3.5 text-cyan" />
+          </div>
+          <span className="text-sm font-semibold text-on-surface">今日饮水</span>
+        </div>
+        <div className="flex flex-col items-center py-2">
+          <div className="text-4xl font-black text-text-primary">{Math.round((selectedLog.water || 0) * 1000)}<span className="text-base font-semibold text-text-muted ml-1">ml</span></div>
+          {(() => {
+            const currentML = Math.round((selectedLog.water || 0) * 1000);
+            const minTarget = 1500;
+            const suggestTarget = 1800;
+            if (currentML >= suggestTarget) {
+              return <div className="mt-1.5 text-xs text-success font-semibold">已达标（建议{suggestTarget}ml）</div>;
+            } else if (currentML >= minTarget) {
+              return <div className="mt-1.5 text-xs text-warning font-semibold">已过最低线，还差{suggestTarget - currentML}ml达建议量</div>;
+            } else {
+              return <div className="mt-1.5 text-xs text-danger font-semibold">还差{minTarget - currentML}ml达最低量 / 还差{suggestTarget - currentML}ml达建议量</div>;
+            }
+          })()}
+        </div>
+      </div>
+
+      <div className="glass rounded-2xl p-4">
         <div className="flex items-center gap-2 mb-4">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-soft">
             <Dumbbell className="h-3.5 w-3.5 text-violet" />
@@ -342,30 +366,6 @@ export default function TodayPage({
               </button>
             );
           })}
-        </div>
-      </div>
-
-      <div className="glass rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-cyan-soft">
-            <Droplets className="h-3.5 w-3.5 text-cyan" />
-          </div>
-          <span className="text-sm font-semibold text-on-surface">今日饮水</span>
-        </div>
-        <div className="flex flex-col items-center py-2">
-          <div className="text-4xl font-black text-text-primary">{Math.round((selectedLog.water || 0) * 1000)}<span className="text-base font-semibold text-text-muted ml-1">ml</span></div>
-          {(() => {
-            const currentML = Math.round((selectedLog.water || 0) * 1000);
-            const minTarget = 1500;
-            const suggestTarget = 1800;
-            if (currentML >= suggestTarget) {
-              return <div className="mt-1.5 text-xs text-success font-semibold">已达标（建议{suggestTarget}ml）</div>;
-            } else if (currentML >= minTarget) {
-              return <div className="mt-1.5 text-xs text-warning font-semibold">已过最低线，还差{suggestTarget - currentML}ml达建议量</div>;
-            } else {
-              return <div className="mt-1.5 text-xs text-danger font-semibold">还差{minTarget - currentML}ml达最低量 / 还差{suggestTarget - currentML}ml达建议量</div>;
-            }
-          })()}
         </div>
       </div>
 
