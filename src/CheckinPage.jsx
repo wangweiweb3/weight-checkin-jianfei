@@ -1,28 +1,38 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { GlassCard, MetricCard } from "./App";
-import { ChevronLeft, ChevronRight, UtensilsCrossed, Flame, PanelTop, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, UtensilsCrossed, Flame, PanelTop, Trash2, CheckCircle2 } from "lucide-react";
+import { FOOD_PRESETS, EXERCISE_OPTIONS } from "./constants";
 
-const EXERCISE_OPTIONS = [
-  { key: "walkDone", label: "步行" },
-  { key: "briskWalkDone", label: "快走" },
-  { key: "sitStandDone", label: "椅子站起" },
-  { key: "wallPushupDone", label: "扶墙俯卧撑" },
-  { key: "stretchDone", label: "拉伸" },
-];
+function todayStr() {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
-const FOOD_PRESETS = [
-  { id: "milk", name: "牛奶 250ml", kcal: 150, baseLabel: "牛奶 250ml" },
-  { id: "egg", name: "鸡蛋 1个", kcal: 70, baseLabel: "鸡蛋 1个" },
-  { id: "oats", name: "燕麦 50g", kcal: 190, baseLabel: "燕麦 50g" },
-  { id: "bread", name: "全麦面包 2片", kcal: 160, baseLabel: "全麦面包 2片" },
-  { id: "chicken", name: "鸡胸肉 100g", kcal: 165, baseLabel: "鸡胸肉 100g" },
-  { id: "rice", name: "米饭 1碗", kcal: 200, baseLabel: "米饭 1碗（约150g）" },
-  { id: "veggies", name: "蔬菜 200g", kcal: 60, baseLabel: "蔬菜 200g", note: "绿叶/瓜类/菌菇" },
-  { id: "tofu", name: "豆腐 150g", kcal: 120, baseLabel: "豆腐 150g" },
-  { id: "nuts", name: "坚果 15g", kcal: 90, baseLabel: "坚果 15g（约10颗）", note: "杏仁/核桃/腰果" },
-  { id: "fruit", name: "水果 1份", kcal: 80, baseLabel: "水果 1份（约150g）", note: "苹果/梨/橙子" },
-  { id: "custom", name: "自定义输入", kcal: 0, baseLabel: "" },
-];
+function anyExerciseDone(log) {
+  return Boolean(
+    log?.walkDone ||
+      log?.briskWalkDone ||
+      log?.sitStandDone ||
+      log?.wallPushupDone ||
+      log?.stretchDone
+  );
+}
+
+function calcCompleted(log) {
+  const items = [
+    log.breakfastDone,
+    log.lunchDone,
+    log.dinnerDone,
+    Number(log.water || 0) > 0,
+    anyExerciseDone(log),
+  ];
+  return items.filter(Boolean).length;
+}
+
+const TOTAL_ITEMS = 5;
 
 export default function CheckinPage({
   profile,
@@ -37,6 +47,7 @@ export default function CheckinPage({
   onToggleExercise,
   onGoDate,
   onSetSelectedDate,
+  onFinalizeDay,
 }) {
   // 本地状态管理输入框
   const [localWeight, setLocalWeight] = useState(selectedLog.weight);
@@ -62,31 +73,31 @@ export default function CheckinPage({
   }, [selectedDate, selectedLog.weight, selectedLog.water, selectedLog.walkMinutes, selectedLog.heelPain]);
 
   const handleWeightBlur = () => {
-    onUpdateLog(selectedDate, { weight: localWeight === "" ? "" : Number(localWeight) });
+    onUpdateLog({ weight: localWeight === "" ? "" : Number(localWeight) });
   };
 
   const handleWaterBlur = () => {
-    onUpdateLog(selectedDate, { water: localWater === "" ? 0 : Number(localWater) });
+    onUpdateLog({ water: localWater === "" ? "" : Number(localWater) });
   };
 
   const handleWalkMinutesBlur = () => {
-    onUpdateLog(selectedDate, { walkMinutes: localWalkMinutes === "" ? 0 : Number(localWalkMinutes) });
+    onUpdateLog({ walkMinutes: localWalkMinutes === "" ? "" : Number(localWalkMinutes) });
   };
 
   const handleHeelPainChange = (val) => {
     setLocalHeelPain(val);
-    onUpdateLog(selectedDate, { heelPain: Number(val) });
+    onUpdateLog({ heelPain: val });
   };
 
   const handleCheckboxChange = (key, checked) => {
-    onUpdateLog(selectedDate, { [key]: checked });
+    onUpdateLog({ [key]: checked });
   };
 
   const addFoodEntry = () => {
     const preset = FOOD_PRESETS.find((f) => f.id === foodDraft.presetId);
     const kcalPerUnit = foodDraft.presetId === "custom" ? Number(foodDraft.customKcal || 0) : preset?.kcal || 0;
     const entry = {
-      id: Date.now(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       meal: foodDraft.mealType,
       name: foodDraft.presetId === "custom" ? foodDraft.customName || "自定义" : preset?.name || "未知",
       qty: Number(foodDraft.qty) || 1,
@@ -94,7 +105,19 @@ export default function CheckinPage({
       totalKcal: Math.round((Number(foodDraft.qty) || 1) * kcalPerUnit),
     };
     const newEntries = [...(selectedLog.mealEntries || []), entry];
-    onUpdateLog(selectedDate, { mealEntries: newEntries });
+    
+    // 如果是全天餐次，自动完成所有三餐打卡
+    // 注意：全天餐次只勾选三餐，不触发自动切换下一天（需要用户手动完成其他打卡项）
+    const updates = { mealEntries: newEntries };
+    if (foodDraft.mealType === "allday") {
+      updates.breakfastDone = true;
+      updates.lunchDone = true;
+      updates.dinnerDone = true;
+    }
+    
+    // 使用 skipAutoAdvance 防止自动切换下一天
+    // 只有用户手动点击"完成今天"按钮才能切换
+    onUpdateLog(updates, { skipAutoAdvance: true });
     // 重置食物草稿
     setFoodDraft({
       mealType: "lunch",
@@ -107,18 +130,38 @@ export default function CheckinPage({
 
   const removeFoodEntry = (id) => {
     const newEntries = (selectedLog.mealEntries || []).filter((e) => e.id !== id);
-    onUpdateLog(selectedDate, { mealEntries: newEntries });
+    onUpdateLog({ mealEntries: newEntries });
   };
 
   const remainingUpper = Math.max(0, selectedMaxKcal - selectedMealTotals.total);
   const overUpper = Math.max(0, selectedMealTotals.total - selectedMaxKcal);
   const belowMin = Math.max(0, selectedMinKcal - selectedMealTotals.total);
 
+  // 日期导航可用性
+  const today = todayStr();
+  const planEndDate = planDates[planDates.length - 1];
+  const maxAllowedDate = today < planEndDate ? today : planEndDate;
+  const canGoPrev = selectedIndex > 0;
+  const canGoNext = selectedIndex < planDates.length - 1 && selectedDate < maxAllowedDate;
+
+  // 打卡进度
+  const completedCount = useMemo(() => calcCompleted(selectedLog), [selectedLog]);
+  const progressPct = Math.round((completedCount / TOTAL_ITEMS) * 100);
+
   return (
     <div className="space-y-4">
       <GlassCard>
         <div className="flex items-center justify-between">
-          <button className="rounded-2xl bg-gray-100 p-2" onClick={() => onGoDate(-1)}>
+          <button
+            onClick={() => onGoDate(-1)}
+            disabled={!canGoPrev}
+            className={`rounded-2xl p-2 transition-all duration-200 ${
+              canGoPrev
+                ? "bg-gray-100 hover:bg-gray-200 active:scale-95"
+                : "bg-gray-50 text-gray-300 cursor-not-allowed"
+            }`}
+            aria-label="上一天"
+          >
             <ChevronLeft className="h-5 w-5" />
           </button>
           <div className="text-center">
@@ -134,10 +177,39 @@ export default function CheckinPage({
               第 {selectedIndex + 1} / {profile.totalDays} 天
             </div>
           </div>
-          <button className="rounded-2xl bg-gray-100 p-2" onClick={() => onGoDate(1)}>
+          <button
+            onClick={() => onGoDate(1)}
+            disabled={!canGoNext}
+            className={`rounded-2xl p-2 transition-all duration-200 ${
+              canGoNext
+                ? "bg-gray-100 hover:bg-gray-200 active:scale-95"
+                : "bg-gray-50 text-gray-300 cursor-not-allowed"
+            }`}
+            aria-label="下一天"
+          >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
+      </GlassCard>
+
+      {/* 打卡进度条 */}
+      <GlassCard>
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-medium text-gray-700">打卡进度</div>
+          <div className="text-sm font-semibold" style={{ color: completedCount >= TOTAL_ITEMS ? "#10b981" : completedCount >= 6 ? "#f59e0b" : "#6b7280" }}>
+            {completedCount} / {TOTAL_ITEMS}
+          </div>
+        </div>
+        <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${progressPct}%`,
+              backgroundColor: completedCount >= TOTAL_ITEMS ? "#10b981" : completedCount >= 6 ? "#f59e0b" : "#6b7280",
+            }}
+          />
+        </div>
+        <div className="mt-1 text-xs text-gray-400 text-right">{progressPct}%</div>
       </GlassCard>
 
       <GlassCard>
@@ -150,7 +222,12 @@ export default function CheckinPage({
               inputMode="decimal"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
               value={localWeight}
-              onChange={(e) => setLocalWeight(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                  setLocalWeight(val);
+                }
+              }}
               onBlur={handleWeightBlur}
             />
           </label>
@@ -161,7 +238,12 @@ export default function CheckinPage({
               inputMode="decimal"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
               value={localWater}
-              onChange={(e) => setLocalWater(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || /^\d*\.?\d*$/.test(val)) {
+                  setLocalWater(val);
+                }
+              }}
               onBlur={handleWaterBlur}
             />
           </label>
@@ -172,7 +254,12 @@ export default function CheckinPage({
               inputMode="numeric"
               className="w-full rounded-xl border border-gray-200 px-3 py-2"
               value={localWalkMinutes}
-              onChange={(e) => setLocalWalkMinutes(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || /^\d*$/.test(val)) {
+                  setLocalWalkMinutes(val);
+                }
+              }}
               onBlur={handleWalkMinutesBlur}
             />
           </label>
@@ -195,17 +282,22 @@ export default function CheckinPage({
             ["breakfastDone", "早餐按计划"],
             ["lunchDone", "午餐按计划"],
             ["dinnerDone", "晚餐按计划"],
-            ["dinnerCarbControlled", "晚餐主食守住"],
-            ["noAlcohol", "无酒精"],
-            ["noSugaryDrinks", "无甜饮料"],
           ].map(([key, label]) => (
-            <label key={key} className="flex items-center gap-2 rounded-2xl bg-gray-50 px-3 py-3">
+            <label 
+              key={key} 
+              className={`flex items-center gap-2 rounded-2xl px-3 py-3 cursor-pointer transition-all duration-200 active:scale-[0.98] ${
+                selectedLog[key] 
+                  ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200" 
+                  : "bg-gray-50 text-gray-800 hover:bg-gray-100 ring-1 ring-gray-200"
+              }`}
+            >
               <input
                 type="checkbox"
                 checked={Boolean(selectedLog[key])}
                 onChange={(e) => handleCheckboxChange(key, e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
               />
-              <span>{label}</span>
+              <span className="font-medium">{label}</span>
             </label>
           ))}
         </div>
@@ -217,12 +309,16 @@ export default function CheckinPage({
               <button
                 key={item.key}
                 onClick={() => onToggleExercise(selectedDate, item.key)}
-                className={`rounded-2xl px-3 py-3 text-left ${
-                  selectedLog[item.key] ? "bg-emerald-50 text-emerald-800" : "bg-gray-50 text-gray-800"
+                className={`rounded-2xl px-3 py-3 text-left transition-all duration-200 active:scale-[0.98] ${
+                  selectedLog[item.key] 
+                    ? "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 ring-1 ring-emerald-200" 
+                    : "bg-gray-50 text-gray-800 hover:bg-gray-100 hover:shadow-sm ring-1 ring-gray-200"
                 }`}
               >
                 <div className="font-medium">{item.label}</div>
-                <div className="text-xs">{selectedLog[item.key] ? "已完成" : "点此完成"}</div>
+                <div className={`text-xs mt-1 px-2 py-0.5 rounded-full inline-block ${selectedLog[item.key] ? "bg-emerald-200 text-emerald-900" : "bg-white text-gray-500"}`}>
+                  {selectedLog[item.key] ? "✓ 已完成" : "点击完成"}
+                </div>
               </button>
             ))}
           </div>
@@ -249,6 +345,7 @@ export default function CheckinPage({
               <option value="lunch">午餐</option>
               <option value="dinner">晚餐</option>
               <option value="snack">加餐</option>
+              <option value="allday">全天</option>
             </select>
           </label>
           <label className="rounded-2xl bg-gray-50 p-3">
@@ -312,7 +409,7 @@ export default function CheckinPage({
           </label>
           <button
             onClick={addFoodEntry}
-            className="rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white self-end"
+            className="rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white self-end hover:bg-gray-800 hover:shadow-lg transition-all duration-200 active:scale-95 active:bg-gray-950"
           >
             添加
           </button>
@@ -340,7 +437,8 @@ export default function CheckinPage({
             : "已达到建议下限；"}{" "}
           餐次拆分：早 {selectedMealTotals.breakfast.toFixed(0)} / 午{" "}
           {selectedMealTotals.lunch.toFixed(0)} / 晚 {selectedMealTotals.dinner.toFixed(0)} / 加{" "}
-          {selectedMealTotals.snack.toFixed(0)} kcal
+          {selectedMealTotals.snack.toFixed(0)}
+          {selectedMealTotals.allday > 0 && ` / 全天 ${selectedMealTotals.allday.toFixed(0)}`} kcal
         </div>
 
         {selectedLog.mealEntries?.length > 0 && (
@@ -360,7 +458,7 @@ export default function CheckinPage({
                 </div>
                 <button
                   onClick={() => removeFoodEntry(entry.id)}
-                  className="rounded-full p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  className="rounded-full p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-all duration-200 active:scale-90 active:bg-red-100"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -369,6 +467,29 @@ export default function CheckinPage({
           </div>
         )}
       </GlassCard>
+      
+      {/* 完成今天按钮 */}
+      <div className="mt-4">
+        <button
+          onClick={onFinalizeDay}
+          disabled={selectedIndex >= planDates.length - 1}
+          className={`w-full rounded-2xl py-4 font-semibold text-white transition-all duration-200 ${
+            selectedIndex >= planDates.length - 1
+              ? completedCount >= TOTAL_ITEMS
+                ? "bg-gradient-to-r from-emerald-500 to-green-600 opacity-70 cursor-not-allowed"
+                : "bg-gray-400 cursor-not-allowed"
+              : completedCount >= TOTAL_ITEMS
+                ? "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 active:scale-95 shadow-lg"
+                : "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 active:scale-95 shadow-lg"
+          }`}
+        >
+          {selectedIndex >= planDates.length - 1
+            ? completedCount >= TOTAL_ITEMS
+              ? "✓ 今日已完成（最后一天）"
+              : `完成今天 (${completedCount}/${TOTAL_ITEMS}) · 已是最后一天`
+            : `✓ 完成今天 (${completedCount}/${TOTAL_ITEMS})`}
+        </button>
+      </div>
     </div>
   );
 }

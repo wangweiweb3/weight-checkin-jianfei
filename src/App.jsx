@@ -31,92 +31,18 @@ import {
   Target,
   CalendarDays,
   ShoppingCart,
-  UtensilsCrossed,
-  Trash2,
   Sparkles,
   PanelTop,
 } from "lucide-react";
 import SettingsPage from "./SettingsPage";
-import CheckinPage from "./CheckinPage";
+import TodayPage from "./TodayPage";
+import WaterPage from "./WaterPage";
+import { FOOD_PRESETS, EXERCISE_OPTIONS, PLAN_DATA, STORAGE_KEY, DEFAULT_PROFILE, PLATEAU_DAYS_THRESHOLD } from "./constants";
 
-const STORAGE_KEY = "mobile-weight-loss-checkin-app-v6";
-
-const FOOD_PRESETS = [
-  { id: "milk", name: "低脂牛奶", baseLabel: "100ml", kcal: 42 },
-  { id: "egg", name: "鸡蛋", baseLabel: "1个", kcal: 70 },
-  { id: "oats", name: "原味传统压片燕麦", baseLabel: "10g", kcal: 38 },
-  { id: "rice", name: "米饭（熟）", baseLabel: "100g", kcal: 116 },
-  { id: "chicken", name: "去皮鸡胸/鸡腿（熟）", baseLabel: "100g", kcal: 165 },
-  { id: "tofu", name: "北豆腐/老豆腐", baseLabel: "100g", kcal: 76 },
-  { id: "yogurt", name: "无糖酸奶", baseLabel: "100g", kcal: 60 },
-  { id: "apple", name: "苹果", baseLabel: "1个", kcal: 95 },
-  { id: "pear", name: "梨", baseLabel: "1个", kcal: 100 },
-  { id: "orange", name: "橙子", baseLabel: "1个", kcal: 62 },
-  { id: "corn", name: "玉米", baseLabel: "1根", kcal: 120 },
-  { id: "potato", name: "土豆（蒸/煮）", baseLabel: "100g", kcal: 77 },
-  { id: "cucumber", name: "黄瓜", baseLabel: "100g", kcal: 15 },
-  { id: "tomato", name: "番茄", baseLabel: "100g", kcal: 18 },
-  {
-    id: "jianbing",
-    name: "山东杂粮煎饼（玉米面+鸡蛋，简版）",
-    baseLabel: "1个",
-    kcal: 320,
-    note: "按不加热狗/鸡柳/额外酱料的简版估算",
-  },
-];
-
-const EXERCISE_OPTIONS = [
-  { key: "walkDone", label: "步行", minutes: 30 },
-  { key: "briskWalkDone", label: "快走", minutes: 35 },
-  { key: "sitStandDone", label: "椅子站起", minutes: 10 },
-  { key: "wallPushupDone", label: "扶墙俯卧撑", minutes: 10 },
-  { key: "stretchDone", label: "拉伸", minutes: 8 },
-];
-
-const PLAN_DATA = {
-  breakfast: [
-    "原味传统压片燕麦 50g",
-    "低脂牛奶 250ml",
-    "鸡蛋 2 个",
-    "苹果/梨/橙子 1 个",
-  ],
-  lunch: [
-    "米饭 100g 熟重",
-    "去皮鸡胸/鸡腿 150g",
-    "西兰花/菜花/圆白菜/胡萝卜 300g",
-    "无糖酸奶 200–250g",
-  ],
-  dinnerNoWalk: [
-    "豆腐 200–250g 或去皮鸡肉 120g",
-    "蔬菜 300g",
-    "米饭 50g 熟重，或玉米半根，或土豆 100g",
-    "无走路日尽量不加餐",
-  ],
-  dinnerWalk: [
-    "豆腐 200–250g 或去皮鸡肉 120g",
-    "蔬菜 300g",
-    "米饭 80g 熟重，或玉米 1 根，或土豆 150g",
-    "当日步行/快走完成后可加 1 次酸奶/低脂奶/水果",
-  ],
-  avoid: [
-    "酒精、甜饮料",
-    "菠菜、坚果/花生、可可/巧克力、麦麸早餐、浓茶",
-    "高蛋白极端减脂、暴食式补偿",
-  ],
-  shopping: [
-    "原味传统压片燕麦 500g",
-    "大米 800g–1kg",
-    "玉米 4 根，土豆 4 个",
-    "去皮鸡胸/鸡腿 1.4–1.5kg",
-    "鸡蛋 22 个左右",
-    "北豆腐/老豆腐 2.2–2.5kg",
-    "无糖酸奶约 2.5kg",
-    "低脂牛奶 2.5–4L",
-    "圆白菜 2 颗，菜花 3 颗，西兰花 3 颗或冷冻 2–3 袋",
-    "胡萝卜 1kg，黄瓜 8–10 根，番茄 10–12 个，冬瓜 1 个小的或半个大的，蘑菇 500g",
-    "苹果 6–8 个，梨 4–6 个，橙子 6–8 个",
-  ],
-};
+// 避免直接修改常量
+const getFoodPresets = () => [...FOOD_PRESETS];
+const getExerciseOptions = () => [...EXERCISE_OPTIONS];
+const getPlanData = () => ({...PLAN_DATA});
 
 function todayStr() {
   const d = new Date();
@@ -152,16 +78,6 @@ function avg(values) {
   return valid.reduce((a, b) => a + b, 0) / valid.length;
 }
 
-function groupMealCalories(entries = []) {
-  const result = { breakfast: 0, lunch: 0, dinner: 0, snack: 0, total: 0 };
-  entries.forEach((item) => {
-    const meal = item.mealType || "snack";
-    result[meal] = (result[meal] || 0) + Number(item.kcal || 0);
-    result.total += Number(item.kcal || 0);
-  });
-  return result;
-}
-
 function getDailyTarget(profile, log) {
   const walkedEnough = Number(log?.walkMinutes || 0) >= 25 || Boolean(log?.walkDone) || Boolean(log?.briskWalkDone);
   return walkedEnough
@@ -190,13 +106,10 @@ function getNextMealLabel(log) {
 
 function isDayComplete(log, profile) {
   return Boolean(
-    log?.breakfastDone &&
+    log?.weight !== "" && log?.weight != null &&
+      log?.breakfastDone &&
       log?.lunchDone &&
       log?.dinnerDone &&
-      log?.dinnerCarbControlled &&
-      log?.noAlcohol &&
-      log?.noSugaryDrinks &&
-      Number(log?.water || 0) >= profile.waterTarget &&
       anyExerciseDone(log)
   );
 }
@@ -209,9 +122,6 @@ function getDefaultLog() {
     breakfastDone: false,
     lunchDone: false,
     dinnerDone: false,
-    dinnerCarbControlled: false,
-    noAlcohol: true,
-    noSugaryDrinks: true,
     walkDone: false,
     briskWalkDone: false,
     sitStandDone: false,
@@ -225,6 +135,66 @@ function getDefaultLog() {
   };
 }
 
+function groupMealCalories(entries) {
+  const totals = { breakfast: 0, lunch: 0, dinner: 0, snack: 0, total: 0 };
+  (entries || []).forEach((e) => {
+    const total = (e.kcalPerUnit || 0) * (e.qty || 1);
+    if (e.mealType) {
+      totals[e.mealType] = (totals[e.mealType] || 0) + total;
+    }
+    totals.total += total;
+  });
+  return totals;
+}
+
+function overCaloriesForDate(date, logs, profile) {
+  const log = logs[date];
+  if (!log) return false;
+  const [min, max] = getDailyTarget(profile, log);
+  const totals = groupMealCalories(log.mealEntries);
+  return totals.total > max;
+}
+
+function underCaloriesForDate(date, logs, profile) {
+  const log = logs[date];
+  if (!log) return false;
+  const [min, max] = getDailyTarget(profile, log);
+  const totals = groupMealCalories(log.mealEntries);
+  return totals.total > 0 && totals.total < min;
+}
+
+function getFoodAdvice(log, profile) {
+  const [min, max] = getDailyTarget(profile, log);
+  const totals = groupMealCalories(log.mealEntries);
+  if (totals.total === 0) return "还没有记录食物，先填一下今天的三餐吧。";
+  if (totals.total > max) return `今天摄入 ${totals.total} kcal，超过目标上限 ${max} kcal。明天试着减少高热量食物或控制分量。`;
+  if (totals.total < min) return `今天摄入 ${totals.total} kcal，低于目标下限 ${min} kcal。适当加一点牛奶/水果/酸奶，避免过度节食。`;
+  return `今天摄入 ${totals.total} kcal，在目标 ${min}–${max} kcal 范围内，继续保持。`;
+}
+
+function getCumulativeCalorieAdvice(logs, planDates, currentIndex) {
+  const datesToCheck = planDates.slice(0, currentIndex + 1);
+  let totalCalories = 0;
+  let loggedDays = 0;
+  datesToCheck.forEach((date) => {
+    const log = logs[date];
+    if (log) {
+      loggedDays += 1;
+      const totals = groupMealCalories(log.mealEntries);
+      totalCalories += totals.total;
+    }
+  });
+  if (loggedDays === 0) return "";
+  const targetTotal = loggedDays * 1500;
+  const diff = totalCalories - targetTotal;
+  if (diff > 0) {
+    return `你当前打卡${loggedDays}天的总热量超过上限${diff}卡，请减少摄入`;
+  } else if (diff < 0) {
+    return `你当前打卡${loggedDays}天的总热量低于上限${Math.abs(diff)}卡，加油继续保持`;
+  }
+  return `你当前打卡${loggedDays}天的总热量正好等于目标${targetTotal}卡，完美`;
+}
+
 function getDefaultState() {
   const startDate = todayStr();
   return {
@@ -233,10 +203,10 @@ function getDefaultState() {
       startWeight: 80,
       targetWeight: 75,
       totalDays: 120,
-      minCaloriesNoWalk: 1450,
-      maxCaloriesNoWalk: 1550,
-      minCaloriesWalk: 1500,
-      maxCaloriesWalk: 1600,
+      minCaloriesNoWalk: 1200,
+      maxCaloriesNoWalk: 1500,
+      minCaloriesWalk: 1300,
+      maxCaloriesWalk: 1500,
       waterTarget: 2.5,
       walkGoal: 30,
     },
@@ -256,7 +226,7 @@ function getDefaultState() {
     },
     activeDate: startDate,
     selectedDate: startDate,
-    activeTab: "home",
+    activeTab: "today",
     selectedWeek: 1,
     homeExerciseKey: "walkDone",
     lastAutoAdvanceNote: "",
@@ -265,67 +235,17 @@ function getDefaultState() {
   };
 }
 
-function overCaloriesForDate(log, profile) {
-  const total = groupMealCalories(log?.mealEntries || []).total;
-  const [, maxKcal] = getDailyTarget(profile, log || {});
-  return Math.max(0, Math.round(total - maxKcal));
-}
-
-function underCaloriesForDate(log, profile) {
-  const total = groupMealCalories(log?.mealEntries || []).total;
-  const [, maxKcal] = getDailyTarget(profile, log || {});
-  // 只有当天有记录且低于上限时才计算缺口
-  if (total === 0) return 0;
-  return Math.max(0, Math.round(maxKcal - total));
-}
-
 function buildRolloverNotice(fromDate, toDate, logs, profile) {
   if (!fromDate || fromDate >= toDate) return "";
   let cursor = fromDate;
   let incompleteDays = 0;
-  let overDays = 0;
-  let totalOver = 0;
   while (cursor < toDate) {
     const log = logs[cursor] || getDefaultLog();
     if (!isDayComplete(log, profile)) incompleteDays += 1;
-    const over = overCaloriesForDate(log, profile);
-    if (over > 0) {
-      overDays += 1;
-      totalOver += over;
-    }
     cursor = addDays(cursor, 1);
   }
-  if (incompleteDays === 0 && overDays === 0) return `已自动切换到 ${toDate}`;
-  const parts = [];
-  if (incompleteDays > 0) parts.push(`过去 ${incompleteDays} 天未完成`);
-  if (overDays > 0) parts.push(`过去 ${overDays} 天饮食超标共约 ${totalOver} kcal`);
-  return `已切换到 ${toDate}。${parts.join("；")}。`;
-}
-
-function buildCalorieDeficitNotice(logs, profile, planDates, activeIndex) {
-  // 计算从开始到当前执行日的所有有记录天数
-  let recordedDays = 0;
-  let totalDeficit = 0;
-  
-  for (let i = 0; i <= activeIndex; i++) {
-    const date = planDates[i];
-    const log = logs[date];
-    if (log && log.mealEntries && log.mealEntries.length > 0) {
-      const deficit = underCaloriesForDate(log, profile);
-      if (deficit > 0) {
-        recordedDays += 1;
-        totalDeficit += deficit;
-      }
-    }
-  }
-  
-  if (recordedDays === 0 || totalDeficit === 0) return null;
-  
-  return {
-    days: recordedDays,
-    totalDeficit: totalDeficit,
-    message: `过去 ${recordedDays} 天你比系统推荐的总摄入低 ${totalDeficit} kcal，继续保持！`
-  };
+  if (incompleteDays === 0) return `已自动切换到 ${toDate}`;
+  return `已切换到 ${toDate}。过去 ${incompleteDays} 天未完成。`;
 }
 
 function applyRollover(prev, systemDate) {
@@ -349,84 +269,122 @@ function applyRollover(prev, systemDate) {
 }
 
 export function GlassCard({ children, className = "" }) {
-  return <div className={`rounded-[28px] bg-white p-4 shadow-sm ring-1 ring-black/5 ${className}`}>{children}</div>;
+  return <div className={`glass rounded-2xl p-4 ${className}`}>{children}</div>;
 }
 
-export function MetricCard({ title, value, sub, icon: Icon, tone = "light" }) {
-  const tones = {
-    light: "bg-white text-gray-900 ring-black/5",
-    dark: "bg-gray-900 text-white ring-gray-900",
-    soft: "bg-gray-100 text-gray-900 ring-gray-200",
-    success: "bg-emerald-50 text-emerald-900 ring-emerald-200",
-    warn: "bg-amber-50 text-amber-900 ring-amber-200",
+export function CircularProgress({ value, size = 120, strokeWidth = 8, gradient = "emerald", children }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (Math.min(value, 100) / 100) * circumference;
+  const gradients = {
+    emerald: { from: "#34d399", to: "#22d3ee" },
+    blue: { from: "#3b82f6", to: "#22d3ee" },
+    violet: { from: "#8b5cf6", to: "#d946ef" },
+    orange: { from: "#fb923c", to: "#f43f5e" },
   };
+  const g = gradients[gradient] || gradients.emerald;
+  const id = `grad-${gradient}-${size}`;
   return (
-    <div className={`rounded-[24px] p-4 shadow-sm ring-1 ${tones[tone] || tones.light}`}>
-      <div className="flex items-center justify-between">
-        <div className={`text-sm ${tone === "dark" ? "text-white/70" : "text-gray-500"}`}>{title}</div>
-        <Icon className={`h-5 w-5 ${tone === "dark" ? "text-white/75" : "text-gray-400"}`} />
-      </div>
-      <div className="mt-2 text-2xl font-semibold">{value}</div>
-      <div className={`mt-1 text-xs ${tone === "dark" ? "text-white/70" : "text-gray-500"}`}>{sub}</div>
+    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90">
+        <defs>
+          <linearGradient id={id} x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor={g.from} />
+            <stop offset="100%" stopColor={g.to} />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={strokeWidth} />
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke={`url(#${id})`} strokeWidth={strokeWidth}
+          strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round"
+          className="transition-all duration-700 ease-out" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
     </div>
   );
 }
 
-function NavButton({ active, icon: Icon, label, onClick }) {
+export function MetricCard({ title, value, sub, icon: Icon, tone = "light" }) {
+  const tones = {
+    light: "bg-surface-1 border-white/6",
+    success: "bg-success-soft border-success/20",
+    warn: "bg-warning-soft border-warning/20",
+    danger: "bg-danger-soft border-danger/20",
+  };
+  const textColors = {
+    light: "text-text-primary",
+    success: "text-success",
+    warn: "text-warning",
+    danger: "text-danger",
+  };
+  return (
+    <div className={`glass rounded-2xl p-4 ${tone !== 'light' ? tones[tone] : ''}`}>
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wider">{title}</div>
+        <Icon className="h-4 w-4 text-hint" />
+      </div>
+      <div className={`mt-2 text-xl font-black tracking-tight ${textColors[tone] || textColors.light}`}>{value}</div>
+      <div className="mt-1 text-[10px] text-text-secondary">{sub}</div>
+    </div>
+  );
+}
+
+function NavButton({ active, icon: Icon, label, onClick, ...props }) {
   return (
     <button
       onClick={onClick}
-      className={`flex flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium ${
-        active ? "bg-gray-900 text-white" : "text-gray-500"
+      className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl px-2 py-2 text-[10px] font-semibold transition-all duration-300 active:scale-95 ${
+        active
+          ? "bg-accent-soft text-accent border border-accent/20"
+          : "text-white/25 hover:text-text-secondary hover:bg-white/4"
       }`}
+      aria-label={label}
+      {...props}
     >
-      <Icon className="h-5 w-5" />
+      <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
       <span>{label}</span>
     </button>
   );
 }
 
-function getFoodAdvice(log, profile) {
-  const entries = log.mealEntries || [];
-  const totals = groupMealCalories(entries);
-  const [minKcal, maxKcal] = getDailyTarget(profile, log);
-  const remaining = maxKcal - totals.total;
-
-  if (!entries.length) {
-    return `今天还没记录食物。先按计划吃：早餐固定燕麦+奶+鸡蛋+水果。今日建议区间 ${minKcal}–${maxKcal} kcal。`;
-  }
-  if (totals.total > maxKcal + 100) {
-    return "今天已明显超过上限，下一顿尽量只吃蛋白+蔬菜，不再加主食、甜饮料和加餐。";
-  }
-  if (totals.lunch > 0 && totals.dinner === 0) {
-    if (totals.total <= minKcal * 0.55) return "晚餐可以按正常计划吃：豆腐/鸡肉 + 蔬菜 300g + 米饭 80g 熟重。";
-    if (totals.total <= maxKcal * 0.8) return "晚餐建议收紧版：豆腐/鸡肉 + 蔬菜 300g + 米饭 50g 熟重，不加餐。";
-    return "晚餐建议只保留蛋白+蔬菜，今天主食尽量不再追加。";
-  }
-  if (totals.breakfast > 0 && totals.lunch === 0) {
-    return `午餐建议控制在 ${Math.max(400, Math.min(550, remaining - 350))} kcal 左右，优先鸡肉/豆腐 + 蔬菜 + 少量主食。`;
-  }
-  if (remaining >= 450) return `今天还比较充裕，剩余可用热量约 ${remaining.toFixed(0)} kcal，下一顿按计划吃即可。`;
-  if (remaining >= 250) return `今天剩余可用热量约 ${remaining.toFixed(0)} kcal，下一顿请用"收紧版晚餐"。`;
-  return `今天剩余可用热量只有约 ${Math.max(0, remaining).toFixed(0)} kcal，后面以蛋白+蔬菜为主。`;
-}
-
-const CLOUD_SYNC_ENABLED = true; // 启用云同步功能
+const CLOUD_SYNC_ENABLED = true;
 const API_BASE_URL = '';
 
 export default function App() {
   const [state, setState] = useState(getDefaultState);
-  const [foodDraft, setFoodDraft] = useState({
-    mealType: "lunch",
-    presetId: "milk",
-    qty: 1,
-    customName: "",
-    customKcal: "",
-  });
   const [showResetModal, setShowResetModal] = useState(false);
   const [syncStatus, setSyncStatus] = useState('idle');
   const [userId, setUserId] = useState('default');
+  const [isLoading, setIsLoading] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalMessage, setSuccessModalMessage] = useState('');
+  const [showMissingModal, setShowMissingModal] = useState(false);
+  const [missingModalItems, setMissingModalItems] = useState([]);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importModalMessage, setImportModalMessage] = useState('');
+  const [importModalType, setImportModalType] = useState('success');
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [correctionModalItems, setCorrectionModalItems] = useState([]);
+  const [showAdvanceDayModal, setShowAdvanceDayModal] = useState(false);
+  const [advanceDayTarget, setAdvanceDayTarget] = useState(null);
+  const [advanceDayIsFinalize, setAdvanceDayIsFinalize] = useState(false);
   const importRef = useRef(null);
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('app-theme') || 'dark';
+    } catch { return 'dark'; }
+  });
+
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try { localStorage.setItem('app-theme', next); } catch {}
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
 
   const handleReset = () => {
     const newState = getDefaultState();
@@ -440,17 +398,26 @@ export default function App() {
   };
 
   const [syncError, setSyncError] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const syncToCloud = async (data) => {
-    if (!CLOUD_SYNC_ENABLED) return;
+    if (!CLOUD_SYNC_ENABLED || isSyncing || !API_BASE_URL) return;
+    setIsSyncing(true);
     setSyncStatus('syncing');
     setSyncError('');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     try {
       const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         setSyncStatus('synced');
         setTimeout(() => setSyncStatus('idle'), 2000);
@@ -460,23 +427,52 @@ export default function App() {
         setSyncStatus('error');
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        setSyncError('同步超时，请检查网络');
+      } else {
+        setSyncError(`网络错误: ${error.message}`);
+      }
       console.error('Sync error:', error);
-      setSyncError(`网络错误: ${error.message}`);
       setSyncStatus('error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
   const syncFromCloud = async () => {
-    if (!CLOUD_SYNC_ENABLED) return;
+    if (!CLOUD_SYNC_ENABLED || isSyncing || !API_BASE_URL) return;
+    setIsSyncing(true);
     setSyncStatus('loading');
     setSyncError('');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
     try {
-      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`);
+      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
       if (response.ok) {
         const cloudData = await response.json();
         if (cloudData && Object.keys(cloudData).length > 0) {
-          setState(prev => ({ ...getDefaultState(), ...cloudData }));
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+          setState(prev => {
+            const localTimestamp = prev.lastModified || 0;
+            const cloudTimestamp = cloudData.lastModified || 0;
+            
+            if (!prev.lastModified && cloudTimestamp === 0) {
+              setSyncError('检测到旧版本数据，建议先导出备份再同步');
+              return prev;
+            } else if (cloudTimestamp > localTimestamp) {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+              return { ...getDefaultState(), ...cloudData };
+            } else if (cloudTimestamp < localTimestamp) {
+              setSyncError('本地数据较新，是否覆盖？（请先导出备份）');
+              return prev;
+            }
+            return prev;
+          });
         }
         setSyncStatus('synced');
         setTimeout(() => setSyncStatus('idle'), 2000);
@@ -486,9 +482,15 @@ export default function App() {
         setSyncStatus('error');
       }
     } catch (error) {
+      if (error.name === 'AbortError') {
+        setSyncError('加载超时，请检查网络');
+      } else {
+        setSyncError(`网络错误: ${error.message}`);
+      }
       console.error('Load from cloud error:', error);
-      setSyncError(`网络错误: ${error.message}`);
       setSyncStatus('error');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -504,24 +506,31 @@ export default function App() {
         const localData = JSON.parse(raw);
         setState({ ...getDefaultState(), ...localData });
       }
-      if (CLOUD_SYNC_ENABLED) {
-        syncFromCloud();
-      }
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  // 自动保存到 localStorage
+  useEffect(() => {
+    if (CLOUD_SYNC_ENABLED) {
+      syncFromCloud();
+    }
+  }, []);
+
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      const stateWithTimestamp = {
+        ...state,
+        lastModified: Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateWithTimestamp));
     } catch (e) {
       console.error(e);
     }
   }, [state]);
 
-  // 定时器：每分钟检查是否需要自动切换日期
   useEffect(() => {
     const tick = () => setState((prev) => applyRollover(prev, todayStr()));
     tick();
@@ -567,6 +576,12 @@ export default function App() {
     [logs]
   );
   const currentWeight = validDates.length ? Number(logs[validDates[validDates.length - 1]].weight) : profile.startWeight;
+  const maxReachedDate = useMemo(() => {
+    const allLoggedDates = Object.keys(logs).sort();
+    const furthest = allLoggedDates.length ? allLoggedDates[allLoggedDates.length - 1] : activeDate;
+    const _planEndDate = planDates[planDates.length - 1];
+    return furthest > _planEndDate ? _planEndDate : furthest;
+  }, [logs, activeDate, planDates]);
   const latestWeightDate = validDates.length ? validDates[validDates.length - 1] : profile.startDate;
   const previousWeight = validDates.length > 1 ? Number(logs[validDates[validDates.length - 2]].weight) : null;
   const previousWeightDate = validDates.length > 1 ? validDates[validDates.length - 2] : null;
@@ -590,19 +605,7 @@ export default function App() {
   }, [planDates, logs, activeIndex]);
 
   const weeklyDelta = weeklyAvgNow != null && weeklyAvgPrev != null ? Number((weeklyAvgNow - weeklyAvgPrev).toFixed(1)) : null;
-  const plateau = activeIndex >= 20 && weeklyAvgNow != null && weeklyAvgPrev != null ? weeklyAvgPrev - weeklyAvgNow < 0.2 : false;
-
-  const activeMealTotals = groupMealCalories(activeLog.mealEntries || []);
-  const selectedMealTotals = groupMealCalories(selectedLog.mealEntries || []);
-  const [activeMinKcal, activeMaxKcal] = getDailyTarget(profile, activeLog);
-  const [selectedMinKcal, selectedMaxKcal] = getDailyTarget(profile, selectedLog);
-  const homeFoodAdvice = getFoodAdvice(activeLog, profile);
-  const checkinFoodAdvice = getFoodAdvice(selectedLog, profile);
-  
-  // 卡路里缺口提示
-  const calorieDeficitNotice = useMemo(() => {
-    return buildCalorieDeficitNotice(logs, profile, planDates, activeIndex);
-  }, [logs, profile, planDates, activeIndex]);
+  const plateau = activeIndex >= PLATEAU_DAYS_THRESHOLD && weeklyAvgNow != null && weeklyAvgPrev != null ? weeklyAvgPrev - weeklyAvgNow < 0.2 : false;
 
   const expectedWeightToday = Number((profile.startWeight - totalGoalLoss * ((activeIndex + 1) / profile.totalDays)).toFixed(1));
   const paceGap = Number((currentWeight - expectedWeightToday).toFixed(1));
@@ -623,23 +626,20 @@ export default function App() {
         ? `当前比计划快 ${Math.abs(paceGap)} kg。`
         : paceGap < 0.3
           ? "当前基本在计划线上。"
-          : `当前比计划慢 ${paceGap} kg，优先守住晚餐主食和甜饮料。`;
+          : `当前比计划慢 ${paceGap} kg，优先控制饮食和运动。`;
     return `${trendPart} ${startPart} ${pacePart}`;
   }, [dayChange, remainingToGoal, paceGap, planEndDate]);
 
   const homeDailyScore = useMemo(() => {
     const checks = [
+      activeLog.weight !== "" && activeLog.weight != null,
       activeLog.breakfastDone,
       activeLog.lunchDone,
       activeLog.dinnerDone,
-      activeLog.dinnerCarbControlled,
-      activeLog.noAlcohol,
-      activeLog.noSugaryDrinks,
-      Number(activeLog.water || 0) >= profile.waterTarget,
       anyExerciseDone(activeLog),
     ];
     return { score: checks.filter(Boolean).length, max: checks.length };
-  }, [activeLog, profile.waterTarget]);
+  }, [activeLog]);
 
   const updateLogForDate = (date, patchOrUpdater, options = {}) => {
     setState((prev) => {
@@ -649,28 +649,18 @@ export default function App() {
           ? patchOrUpdater(currentLog)
           : { ...currentLog, ...patchOrUpdater };
       const nextLogs = { ...prev.logs, [date]: nextLog };
-      let nextState = { ...prev, logs: nextLogs };
-      const becameComplete = !isDayComplete(currentLog, prev.profile) && isDayComplete(nextLog, prev.profile);
-      if (becameComplete && !options.skipAutoAdvance) {
-        const nextDate = addDays(date, 1);
-        if (!nextLogs[nextDate]) nextLogs[nextDate] = getDefaultLog();
-        nextState = {
-          ...nextState,
-          logs: nextLogs,
-          activeDate: nextDate,
-          selectedDate: nextDate,
-          activeTab: "checkin",
-          lastAutoAdvanceNote: `${date} 已完成，已切换到 ${nextDate}`,
-        };
-      }
-      return nextState;
+      // 移除自动切换逻辑，改为必须由用户手动点击"完成今天"按钮触发
+      // 唯一例外：时间超过当天23:59:59时自动切换到下一天
+      return { ...prev, logs: nextLogs };
     });
   };
 
   const updateActiveLog = (patchOrUpdater, options = {}) => updateLogForDate(activeDate, patchOrUpdater, options);
   const updateSelectedLog = (patchOrUpdater, options = {}) => updateLogForDate(selectedDate, patchOrUpdater, options);
 
-  const updateProfile = useCallback((key, value) => setState((prev) => ({ ...prev, profile: { ...prev.profile, [key]: value } })), []);
+  const updateProfile = useCallback((key, value) => {
+    setState((prev) => ({ ...prev, profile: { ...prev.profile, [key]: value } }));
+  }, []);
   const updateAI = useCallback((key, value) => setState((prev) => ({ ...prev, ai: { ...prev.ai, [key]: value } })), []);
   const setGoalLoss = useCallback((kg) => {
     setState((prev) => ({ 
@@ -704,61 +694,82 @@ export default function App() {
   };
   const completeSelectedExerciseActive = () => toggleExerciseForDate(activeDate, homeExerciseKey, true);
 
-  const goDate = (dir) => {
+  const handleGoDateForTodayPage = (dir) => {
     const nextIdx = clamp(selectedIndex + dir, 0, planDates.length - 1);
-    setState((prev) => ({ ...prev, selectedDate: planDates[nextIdx] }));
-  };
-
-  const addFoodEntry = () => {
-    const isCustom = foodDraft.presetId === "custom";
-    let entry = null;
-    if (isCustom) {
-      if (!foodDraft.customName || !foodDraft.customKcal) return;
-      const qty = Number(foodDraft.qty) || 1;
-      entry = {
-        mealType: foodDraft.mealType,
-        name: foodDraft.customName,
-        qty,
-        baseLabel: "份",
-        kcal: Number((Number(foodDraft.customKcal) * qty).toFixed(0)),
-      };
-    } else {
-      const preset = FOOD_PRESETS.find((f) => f.id === foodDraft.presetId);
-      if (!preset) return;
-      const qty = Number(foodDraft.qty) || 1;
-      entry = {
-        mealType: foodDraft.mealType,
-        name: preset.name,
-        qty,
-        baseLabel: preset.baseLabel,
-        kcal: Number((preset.kcal * qty).toFixed(0)),
-        note: preset.note || "",
-      };
+    const nextDate = planDates[nextIdx];
+    
+    if (dir > 0 && nextDate > maxReachedDate) {
+      setAdvanceDayTarget(nextDate);
+      setAdvanceDayIsFinalize(false);
+      setShowAdvanceDayModal(true);
+    } else if (nextDate <= maxReachedDate) {
+      setState((prev) => ({ ...prev, activeDate: nextDate, selectedDate: nextDate }));
     }
-    updateSelectedLog((log) => ({ ...log, mealEntries: [...(log.mealEntries || []), entry] }), { skipAutoAdvance: true });
-    setFoodDraft((prev) => ({ ...prev, qty: 1, customName: "", customKcal: "" }));
   };
 
-  const removeFoodEntry = (index) =>
-    updateSelectedLog((log) => ({ ...log, mealEntries: (log.mealEntries || []).filter((_, i) => i !== index) }), {
-      skipAutoAdvance: true,
-    });
+  const handleGoDateForWaterPage = (dir) => {
+    const nextIdx = clamp(selectedIndex + dir, 0, planDates.length - 1);
+    const nextDate = planDates[nextIdx];
+    if (nextDate <= maxReachedDate) {
+      setState((prev) => ({ ...prev, activeDate: nextDate, selectedDate: nextDate }));
+    }
+  };
+
+  const handleSetSelectedDate = (date) => {
+    const currentDate = selectedDate;
+    if (date > currentDate) {
+      // Forward navigation requires confirmation
+      setAdvanceDayTarget(date);
+      setAdvanceDayIsFinalize(false);
+      setShowAdvanceDayModal(true);
+    } else {
+      // Backward navigation is allowed directly
+      setState(prev => ({ ...prev, activeDate: date, selectedDate: date }));
+    }
+  };
 
   const finalizeSelectedDay = () => {
     const log = logs[selectedDate] || getDefaultLog();
     if (!isDayComplete(log, profile)) {
-      alert("今天还没完成全部核心打卡：三餐、晚餐主食、饮水、无甜饮/无酒精、至少一项运动。");
+      const missing = [];
+      if (log?.weight === "" || log?.weight == null) missing.push("体重");
+      if (!log?.breakfastDone) missing.push("早餐");
+      if (!log?.lunchDone) missing.push("午餐");
+      if (!log?.dinnerDone) missing.push("晚餐");
+      if (!anyExerciseDone(log)) missing.push("运动");
+      
+      setMissingModalItems(missing);
+      setShowMissingModal(true);
       return;
     }
     const nextDate = addDays(selectedDate, 1);
+    setAdvanceDayTarget(nextDate);
+    setAdvanceDayIsFinalize(true);
+    setShowAdvanceDayModal(true);
+  };
+
+  const confirmAdvanceDay = () => {
+    if (!advanceDayTarget) return;
+    const nextDate = advanceDayTarget;
+    const isFinalize = advanceDayIsFinalize;
+    const currentTab = activeTab;
+    
+    if (isFinalize) {
+      setSuccessModalMessage(`${selectedDate} 已完成！\n已切换到第 ${planDates.indexOf(nextDate) + 1} 天：${nextDate}`);
+      setShowSuccessModal(true);
+    }
+    
     setState((prev) => ({
       ...prev,
       logs: { ...prev.logs, [nextDate]: prev.logs[nextDate] || getDefaultLog() },
       activeDate: nextDate,
       selectedDate: nextDate,
-      activeTab: "checkin",
-      lastAutoAdvanceNote: `${selectedDate} 已完成，已切换到 ${nextDate}`,
+      activeTab: currentTab,
+      lastAutoAdvanceNote: isFinalize ? `${selectedDate} 已完成，已切换到 ${nextDate}` : `已切换到 ${nextDate}`,
     }));
+    setShowAdvanceDayModal(false);
+    setAdvanceDayTarget(null);
+    setAdvanceDayIsFinalize(false);
   };
 
   const exportData = () => {
@@ -776,9 +787,28 @@ export default function App() {
     if (!file) return;
     const text = await file.text();
     try {
-      setState({ ...getDefaultState(), ...JSON.parse(text) });
-    } catch {
-      alert("导入失败，请选择正确的 JSON 备份文件");
+      const data = JSON.parse(text);
+      // 验证数据结构
+      if (!data || typeof data !== 'object') {
+        throw new Error('无效的数据格式');
+      }
+      // 验证必需的字段
+      if (!data.profile || !data.logs) {
+        throw new Error('数据缺少必需的字段（profile 或 logs）');
+      }
+      // 验证 profile 字段
+      if (!data.profile.startDate || !data.profile.totalDays) {
+        throw new Error('profile 数据不完整');
+      }
+      // 合并数据，保留默认状态中的必需字段
+      setState({ ...getDefaultState(), ...data });
+      setImportModalType('success');
+      setImportModalMessage('数据导入成功！');
+      setShowImportModal(true);
+    } catch (err) {
+      setImportModalType('error');
+      setImportModalMessage(`导入失败：${err.message || '请选择正确的 JSON 备份文件'}`);
+      setShowImportModal(true);
     }
   };
 
@@ -806,17 +836,17 @@ export default function App() {
     const weekWeights = weekDates.map((d) => (logs[d]?.weight !== "" && logs[d]?.weight != null ? Number(logs[d]?.weight) : null));
     const weekWalks = weekDates.map((d) => Number(logs[d]?.walkMinutes || 0));
     const weekWaters = weekDates.map((d) => Number(logs[d]?.water || 0));
-    const weekPains = weekDates.map((d) => Number(logs[d]?.heelPain || 0));
+    const weekCalories = weekDates.map((d) => {
+      const log = logs[d];
+      return log ? groupMealCalories(log.mealEntries).total : 0;
+    });
     const summaryRows = weekDates.map((d) => {
       const log = logs[d] || getDefaultLog();
       const checks = [
+        log.weight !== "" && log.weight != null,
         log.breakfastDone,
         log.lunchDone,
         log.dinnerDone,
-        log.dinnerCarbControlled,
-        log.noAlcohol,
-        log.noSugaryDrinks,
-        Number(log.water || 0) >= profile.waterTarget,
         anyExerciseDone(log),
       ];
       return {
@@ -825,7 +855,7 @@ export default function App() {
         weight: log.weight === "" ? null : Number(log.weight),
         walk: Number(log.walkMinutes || 0),
         water: Number(log.water || 0),
-        pain: Number(log.heelPain || 0),
+        calories: groupMealCalories(log.mealEntries).total,
         score: checks.filter(Boolean).length,
       };
     });
@@ -836,8 +866,9 @@ export default function App() {
       avgWeight: currAvg,
       avgWalk: avg(weekWalks),
       avgWater: avg(weekWaters),
-      maxPain: Math.max(...weekPains, 0),
-      loggedDays: weekDates.filter((d) => logs[d]?.weight !== "" || logs[d]?.mealEntries?.length).length,
+      avgCalories: avg(weekCalories),
+      totalCalories: weekCalories.reduce((a, b) => a + b, 0),
+      loggedDays: weekDates.filter((d) => logs[d]?.weight !== "").length,
       prevAvg,
       deltaVsPrev: prevAvg != null && currAvg != null ? Number((currAvg - prevAvg).toFixed(1)) : null,
       adherence: Math.round((summaryRows.reduce((a, b) => a + b.score, 0) / (summaryRows.length * 8 || 1)) * 100),
@@ -850,59 +881,105 @@ export default function App() {
     if (weekStats.deltaVsPrev != null && weekStats.deltaVsPrev < 0) return "这周平均体重比上周更低，方向是对的。";
     if ((weekStats.avgWalk || 0) < 20) return "这周运动偏少，先把每天至少一项运动守住。";
     if ((weekStats.avgWater || 0) < profile.waterTarget) return "这周喝水偏少，优先补到 2.5L。";
-    return "这周体重还没明显往下，先检查晚餐主食、加餐和外食。";
+    return "这周体重还没明显往下，先检查加餐和外食。";
   }, [weekStats, profile.waterTarget]);
 
+  const cumulativeCalorieAdvice = useMemo(() => getCumulativeCalorieAdvice(logs, planDates, activeIndex), [logs, planDates, activeIndex]);
+
   const HomePage = () => {
-    const remainingUpper = Math.max(0, activeMaxKcal - activeMealTotals.total);
-    const overUpper = Math.max(0, activeMealTotals.total - activeMaxKcal);
     const currentExerciseDone = Boolean(activeLog[homeExerciseKey]);
+    
+    const canGoPrevDay = activeIndex > 0;
+    const today = todayStr();
+    const canGoNextDay = activeIndex < planDates.length - 1 && activeDate < today;
+    
+    const goPrevDay = () => {
+      if (canGoPrevDay) {
+        const prevDate = planDates[activeIndex - 1];
+        setState(prev => ({ ...prev, activeDate: prevDate, selectedDate: prevDate }));
+      }
+    };
+    
+    const goNextDay = () => {
+      if (canGoNextDay) {
+        const nextDate = planDates[activeIndex + 1];
+        setAdvanceDayTarget(nextDate);
+        setAdvanceDayIsFinalize(false);
+        setShowAdvanceDayModal(true);
+      }
+    };
 
     return (
       <div className="space-y-4">
-        <div className="rounded-[30px] bg-gradient-to-br from-gray-950 via-gray-900 to-gray-700 p-5 text-white shadow-lg">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-sm text-white/70">{planTitle}</div>
-              <div className="mt-1 text-2xl font-semibold">当前执行日：{activeDate}</div>
-              <div className="mt-2 text-sm text-white/80">当前 {currentWeight} kg · 已减 {lossSoFar > 0 ? lossSoFar : 0} kg · 目标 {profile.targetWeight} kg · 结束于 {planEndDate}</div>
+        <div className="relative overflow-hidden rounded-[28px] bg-mesh p-5">
+          <div className="absolute -top-16 -right-16 h-36 w-36 rounded-full bg-accent/8 blur-3xl" />
+          <div className="absolute -bottom-12 -left-12 h-28 w-28 rounded-full bg-cyan/6 blur-3xl" />
+
+          <div className="relative flex items-center justify-between">
+            <button onClick={goPrevDay} disabled={!canGoPrevDay}
+              className={`rounded-xl p-2 transition-all duration-200 ${canGoPrevDay ? "bg-surface-3 hover:bg-surface-4 active:scale-95" : "opacity-20 cursor-not-allowed"}`}>
+              <ChevronLeft className="h-5 w-5 text-sub" />
+            </button>
+            <div className="flex-1 text-center">
+              <div className="text-[11px] text-white/40 font-medium">{planTitle}</div>
+              <div className="mt-1 text-xl font-black text-white">{activeDate}</div>
+              <div className="mt-1 text-[11px] text-text-secondary">当前 {currentWeight} kg · 已减 {lossSoFar > 0 ? lossSoFar : 0} kg · 目标 {profile.targetWeight} kg</div>
             </div>
-            <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
-              <div className="text-xs text-white/70">第</div>
-              <div className="text-xl font-semibold">{activeIndex + 1}天</div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-surface-2 px-3 py-2 text-center">
+                <div className="text-[9px] text-text-muted">第</div>
+                <div className="text-lg font-black text-white">{activeIndex + 1}<span className="text-xs text-white/30">天</span></div>
+              </div>
+              <button onClick={goNextDay} disabled={!canGoNextDay}
+                className={`rounded-xl p-2 transition-all duration-200 ${canGoNextDay ? "bg-white/8 hover:bg-white/12 active:scale-95" : "opacity-20 cursor-not-allowed"}`}>
+                <ChevronRight className="h-5 w-5 text-white/60" />
+              </button>
             </div>
           </div>
-          <div className="mt-4 space-y-3">
+          <div className="mt-4 space-y-2.5">
             <div>
-              <div className="mb-1 flex items-center justify-between text-xs text-white/70"><span>时间进度</span><span>{Math.round(timeProgress)}%</span></div>
-              <div className="h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-white" style={{ width: `${timeProgress}%` }} /></div>
+              <div className="mb-1 flex items-center justify-between text-[10px] text-white/30"><span>时间进度</span><span>{Math.round(timeProgress)}%</span></div>
+              <div className="h-1.5 rounded-full bg-progress-track"><div className="h-1.5 rounded-full bg-accent transition-all duration-700" style={{ width: `${timeProgress}%` }} /></div>
             </div>
             <div>
-              <div className="mb-1 flex items-center justify-between text-xs text-white/70"><span>体重进度</span><span>{Math.round(weightProgress)}%</span></div>
-              <div className="h-2 rounded-full bg-white/10"><div className="h-2 rounded-full bg-emerald-400" style={{ width: `${weightProgress}%` }} /></div>
+              <div className="mb-1 flex items-center justify-between text-[10px] text-white/30"><span>体重进度</span><span>{Math.round(weightProgress)}%</span></div>
+              <div className="h-1.5 rounded-full bg-white/6"><div className="h-1.5 rounded-full bg-success transition-all duration-700" style={{ width: `${weightProgress}%` }} /></div>
             </div>
           </div>
         </div>
 
-        {rolloverNotice ? <GlassCard className="bg-amber-50 ring-amber-200"><div className="text-sm text-amber-800">{rolloverNotice}</div></GlassCard> : null}
-        {lastAutoAdvanceNote ? <GlassCard className="bg-emerald-50 ring-emerald-200"><div className="text-sm text-emerald-800">{lastAutoAdvanceNote}</div></GlassCard> : null}
-        {calorieDeficitNotice ? <GlassCard className="bg-blue-50 ring-blue-200"><div className="text-sm text-blue-800">{calorieDeficitNotice.message}</div></GlassCard> : null}
+        {rolloverNotice ? <div className="glass rounded-xl px-4 py-3 border-warning/20"><div className="text-[11px] text-warning font-semibold">{rolloverNotice}</div></div> : null}
+        {lastAutoAdvanceNote ? <div className="glass rounded-xl px-4 py-3 border-success/20"><div className="text-[11px] text-success font-semibold">{lastAutoAdvanceNote}</div></div> : null}
 
-        <GlassCard className="bg-emerald-50 ring-emerald-200">
-          <div className="flex items-center justify-between"><div><div className="text-lg font-semibold text-emerald-900">目标反馈</div><div className="mt-1 text-sm text-emerald-800">{feedbackText}</div></div><Sparkles className="h-5 w-5 text-emerald-700" /></div>
-          <div className="mt-3 text-xs text-emerald-700">按计划，当前执行日的参考体重约 {expectedWeightToday} kg。最新记录日期：{latestWeightDate}{previousWeightDate ? `，上一条记录：${previousWeightDate}` : ""}</div>
-        </GlassCard>
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-success-soft">
+              <Sparkles className="h-3.5 w-3.5 text-success" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-on-surface">目标反馈</div>
+              <div className="text-[11px] text-white/40 mt-0.5">{feedbackText}</div>
+            </div>
+          </div>
+          <div className="text-[10px] text-white/25">按计划，当前执行日的参考体重约 {expectedWeightToday} kg</div>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard title="今日热量区间" value={`${activeMinKcal}–${activeMaxKcal} kcal`} sub={`已吃 ${activeMealTotals.total.toFixed(0)} kcal`} icon={Flame} tone="dark" />
-          <MetricCard title="剩余卡路里" value={overUpper > 0 ? `+${overUpper.toFixed(0)} kcal` : `${remainingUpper.toFixed(0)} kcal`} sub={overUpper > 0 ? "已超过上限" : "到上限还剩"} icon={PanelTop} />
           <MetricCard title="7天平均体重" value={weeklyAvgNow != null ? `${weeklyAvgNow.toFixed(1)} kg` : "—"} sub={weeklyDelta == null ? "满2周后显示变化" : weeklyDelta < 0 ? `比上周 ${Math.abs(weeklyDelta).toFixed(1)} kg` : `比上周 +${weeklyDelta.toFixed(1)} kg`} icon={TrendingDown} />
-          <MetricCard title="当前执行日完成度" value={`${homeDailyScore.score}/${homeDailyScore.max}`} sub={homeDailyScore.score >= 6 ? "联动正常" : "还有待办"} icon={CheckCircle2} />
+          <MetricCard title="今日完成度" value={`${homeDailyScore.score}/${homeDailyScore.max}`} sub={homeDailyScore.score >= 5 ? "联动正常" : "还有待办"} icon={CheckCircle2} tone={homeDailyScore.score >= 5 ? "success" : "light"} />
         </div>
 
-        <GlassCard>
-          <div className="flex items-center justify-between"><div><div className="text-lg font-semibold">当前执行日待办</div><div className="text-sm text-gray-500">可直接点击完成，下面一键完成也会联动刷新</div></div><Target className="h-5 w-5 text-gray-400" /></div>
-          <div className="mt-3 space-y-2">
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+              <Target className="h-3.5 w-3.5 text-accent" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white/80">今日待办</div>
+              <div className="text-[10px] text-white/30">可直接点击完成</div>
+            </div>
+          </div>
+          <div className="space-y-2">
             {[
               {
                 id: "meal",
@@ -916,104 +993,253 @@ export default function App() {
                 done: Boolean(activeLog[homeExerciseKey]),
                 action: completeSelectedExerciseActive,
               },
-              {
-                id: "carb",
-                label: "晚餐主食守住",
-                done: Boolean(activeLog.dinnerCarbControlled),
-                action: () => updateActiveLog({ dinnerCarbControlled: !activeLog.dinnerCarbControlled }),
-              },
-              {
-                id: "water",
-                label: `喝水到 ${profile.waterTarget}L`,
-                done: Number(activeLog.water || 0) >= profile.waterTarget,
-                action: () => updateActiveLog({ water: profile.waterTarget }),
-              },
-              {
-                id: "sweet",
-                label: "无甜饮料",
-                done: Boolean(activeLog.noSugaryDrinks),
-                action: () => updateActiveLog({ noSugaryDrinks: !activeLog.noSugaryDrinks }),
-              },
             ].map((todo) => (
-              <button key={todo.id} onClick={todo.action} className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left ${todo.done ? "bg-emerald-50 text-emerald-800" : "bg-gray-50 text-gray-800"}`}>
-                <span className="text-sm font-medium">{todo.label}</span>
-                <span className="text-xs">{todo.done ? "已完成" : "点此完成"}</span>
+              <button key={todo.id} onClick={todo.action}
+                className={`flex w-full items-center justify-between rounded-xl px-4 py-3.5 text-left transition-all duration-300 active:scale-[0.98] ${
+                  todo.done
+                    ? "bg-success-soft border border-success/20"
+                    : "bg-white/3 border border-white/6 hover:bg-white/6 hover:border-white/10"
+                }`}>
+                <span className="text-sm font-semibold text-white/70">{todo.label}</span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${todo.done ? "bg-success/20 text-success" : "bg-white/6 text-white/30"}`}>
+                  {todo.done ? "✓ 已完成" : "点击完成"}
+                </span>
               </button>
             ))}
           </div>
-        </GlassCard>
+        </div>
 
-        <GlassCard>
-          <div className="flex items-center justify-between"><div><div className="text-lg font-semibold">首页一键完成</div><div className="text-sm text-gray-500">会和打卡页实时联动</div></div><ClipboardCheck className="h-5 w-5 text-gray-400" /></div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <button onClick={completeNextMealActive} className="rounded-[24px] bg-white p-4 text-left shadow-sm ring-1 ring-black/5"><div className="text-sm text-gray-500">下一餐次</div><div className="mt-2 font-semibold">{getNextMealLabel(activeLog)}</div></button>
-            <button onClick={() => updateActiveLog({ dinnerCarbControlled: !activeLog.dinnerCarbControlled })} className="rounded-[24px] bg-white p-4 text-left shadow-sm ring-1 ring-black/5"><div className="text-sm text-gray-500">晚餐主食</div><div className="mt-2 font-semibold">{activeLog.dinnerCarbControlled ? "已守住" : "点此完成"}</div></button>
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+              <ClipboardCheck className="h-3.5 w-3.5 text-accent" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-white/80">一键完成</div>
+              <div className="text-[10px] text-white/30">会和打卡页实时联动</div>
+            </div>
           </div>
-          <div className="mt-4">
-            <div className="text-sm text-gray-500">选择当前执行日完成的运动</div>
-            <div className="mt-2 flex flex-wrap gap-2">
+          <button onClick={completeNextMealActive}
+            className="w-full rounded-xl bg-bg-input border border-white/6 p-4 text-left hover:bg-white/4 transition-all duration-200 active:scale-[0.98]">
+            <div className="text-[10px] text-white/30 uppercase tracking-wider">下一餐次</div>
+            <div className="mt-1 text-sm font-bold text-white">{getNextMealLabel(activeLog)}</div>
+          </button>
+          <div className="mt-3">
+            <div className="text-[10px] text-white/30 mb-2">选择运动</div>
+            <div className="flex flex-wrap gap-1.5">
               {EXERCISE_OPTIONS.map((item) => (
-                <button key={item.key} onClick={() => setState((prev) => ({ ...prev, homeExerciseKey: item.key }))} className={`rounded-full px-3 py-2 text-sm ${homeExerciseKey === item.key ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700"}`}>{item.label}</button>
+                <button key={item.key} onClick={() => setState((prev) => ({ ...prev, homeExerciseKey: item.key }))}
+                  className={`rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all duration-200 active:scale-95 ${
+                    homeExerciseKey === item.key ? "bg-accent text-white" : "bg-white/4 text-white/40 hover:bg-white/8"
+                  }`}>
+                  {item.label}
+                </button>
               ))}
             </div>
-            <button onClick={completeSelectedExerciseActive} className="mt-3 w-full rounded-2xl bg-gray-900 px-4 py-3 font-medium text-white">{currentExerciseDone ? `${selectedExercise.label} 已完成` : `一键完成 ${selectedExercise.label}`}</button>
+            <button onClick={completeSelectedExerciseActive}
+              className={`mt-3 w-full rounded-xl py-3 font-bold text-sm transition-all duration-300 active:scale-[0.98] ${
+                currentExerciseDone ? "bg-success text-white glow-success" : "bg-accent text-white glow-accent hover:opacity-90"
+              }`}>
+              {currentExerciseDone ? `✓ ${selectedExercise.label} 已完成` : `一键完成 ${selectedExercise.label}`}
+            </button>
           </div>
-          <div className="mt-4 rounded-2xl bg-gray-50 p-3 text-sm text-gray-700">食物建议：{homeFoodAdvice}</div>
-        </GlassCard>
+        </div>
 
-        {plateau ? <div className="rounded-[28px] bg-amber-50 p-4 shadow-sm ring-1 ring-amber-200"><div className="flex items-start gap-3"><AlertCircle className="mt-0.5 h-5 w-5 text-amber-600" /><div><div className="font-semibold text-amber-900">平台期提醒</div><div className="mt-1 text-sm text-amber-800">最近2周下降不明显。先别猛减热量，优先检查晚餐主食、无走路日加餐、外食和甜饮料。</div></div></div></div> : null}
+        {plateau ? (
+          <div className="rounded-2xl bg-warning-soft border border-warning/15 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="mt-0.5 h-5 w-5 text-warning" />
+              <div>
+                <div className="font-semibold text-warning">平台期提醒</div>
+                <div className="mt-1 text-[11px] text-warning/60">最近2周下降不明显。先别猛减热量，优先检查无走路日加餐、外食和甜饮料。</div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     );
   };
 
   const PlanPage = () => (
     <div className="space-y-4">
-      <GlassCard><div className="flex items-center justify-between"><div><div className="text-lg font-semibold">最终版饮食计划</div><div className="text-sm text-gray-500">不用再回聊天记录里翻</div></div><Target className="h-5 w-5 text-gray-400" /></div></GlassCard>
-      <GlassCard><div className="text-lg font-semibold">早餐固定模板</div><div className="mt-3 space-y-2">{PLAN_DATA.breakfast.map((item) => <div key={item} className="rounded-2xl bg-gray-50 px-3 py-3 text-sm">• {item}</div>)}</div></GlassCard>
-      <GlassCard><div className="text-lg font-semibold">午餐模板</div><div className="mt-3 space-y-2">{PLAN_DATA.lunch.map((item) => <div key={item} className="rounded-2xl bg-gray-50 px-3 py-3 text-sm">• {item}</div>)}</div></GlassCard>
-      <GlassCard><div className="text-lg font-semibold">晚餐模板（不走路日）</div><div className="mt-3 space-y-2">{PLAN_DATA.dinnerNoWalk.map((item) => <div key={item} className="rounded-2xl bg-gray-50 px-3 py-3 text-sm">• {item}</div>)}</div></GlassCard>
-      <GlassCard><div className="text-lg font-semibold">晚餐模板（走路日）</div><div className="mt-3 space-y-2">{PLAN_DATA.dinnerWalk.map((item) => <div key={item} className="rounded-2xl bg-gray-50 px-3 py-3 text-sm">• {item}</div>)}</div></GlassCard>
-      <GlassCard><div className="text-lg font-semibold">尽量避开</div><div className="mt-3 space-y-2">{PLAN_DATA.avoid.map((item) => <div key={item} className="rounded-2xl bg-amber-50 px-3 py-3 text-sm text-amber-800">• {item}</div>)}</div></GlassCard>
-      <GlassCard><div className="flex items-center justify-between"><div className="text-lg font-semibold">10天采购建议</div><ShoppingCart className="h-5 w-5 text-gray-400" /></div><div className="mt-3 space-y-2">{PLAN_DATA.shopping.map((item) => <div key={item} className="rounded-2xl bg-gray-50 px-3 py-3 text-sm">• {item}</div>)}</div></GlassCard>
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+            <Target className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white/80">最终版饮食计划</div>
+            <div className="text-[10px] text-white/30">不用再回聊天记录里翻</div>
+          </div>
+        </div>
+      </div>
+      {[
+        { title: "早餐固定模板", items: PLAN_DATA.breakfast, icon: "🌅" },
+        { title: "午餐模板", items: PLAN_DATA.lunch, icon: "☀️" },
+        { title: "晚餐模板（不走路日）", items: PLAN_DATA.dinnerNoWalk, icon: "🌙" },
+        { title: "晚餐模板（走路日）", items: PLAN_DATA.dinnerWalk, icon: "🌙" },
+      ].map(({ title, items, icon }) => (
+        <div key={title} className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-base">{icon}</span>
+            <span className="text-sm font-semibold text-white/80">{title}</span>
+          </div>
+          <div className="space-y-1.5">
+            {items.map((item) => <div key={item} className="rounded-lg bg-bg-input px-3 py-2.5 text-[11px] text-white/60 border border-white/4">{item}</div>)}
+          </div>
+        </div>
+      ))}
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">⚠️</span>
+          <span className="text-sm font-semibold text-warning">尽量避开</span>
+        </div>
+        <div className="space-y-1.5">
+          {PLAN_DATA.avoid.map((item) => <div key={item} className="rounded-lg bg-warning-soft px-3 py-2.5 text-[11px] text-warning border border-warning/10">{item}</div>)}
+        </div>
+      </div>
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+            <ShoppingCart className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <span className="text-sm font-semibold text-white/80">10天采购建议</span>
+        </div>
+        <div className="space-y-1.5">
+          {PLAN_DATA.shopping.map((item) => <div key={item} className="rounded-lg bg-bg-input px-3 py-2.5 text-[11px] text-white/60 border border-white/4">{item}</div>)}
+        </div>
+      </div>
     </div>
   );
 
   const WeeklyPage = () => (
     <div className="space-y-4">
-      <GlassCard><div className="flex items-center justify-between gap-3"><div><div className="text-lg font-semibold">每周总结页</div><div className="text-sm text-gray-500">看趋势，不被单日体重吓到</div></div><CalendarDays className="h-5 w-5 text-gray-400" /></div><div className="mt-4 flex items-center gap-2 overflow-x-auto pb-1">{Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => <button key={week} onClick={() => setState((prev) => ({ ...prev, selectedWeek: week }))} className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium ${selectedWeek === week ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700"}`}>第 {week} 周</button>)}</div></GlassCard>
-      <div className="grid grid-cols-2 gap-3">
-        <MetricCard title="本周平均体重" value={weekStats.avgWeight != null ? `${weekStats.avgWeight.toFixed(1)} kg` : "—"} sub={weekStats.deltaVsPrev == null ? "上周数据不足" : weekStats.deltaVsPrev < 0 ? `比上周 ${Math.abs(weekStats.deltaVsPrev).toFixed(1)} kg` : `比上周 +${weekStats.deltaVsPrev.toFixed(1)} kg`} icon={Scale} />
-        <MetricCard title="本周平均步行" value={weekStats.avgWalk != null ? `${weekStats.avgWalk.toFixed(0)} 分钟` : "—"} sub="越稳定越重要" icon={Footprints} />
-        <MetricCard title="本周平均喝水" value={weekStats.avgWater != null ? `${weekStats.avgWater.toFixed(1)} L` : "—"} sub={`目标 ${profile.waterTarget} L`} icon={Droplets} />
-        <MetricCard title="本周执行率" value={`${weekStats.adherence || 0}%`} sub={`有记录 ${weekStats.loggedDays}/${weekDates.length} 天`} icon={CheckCircle2} />
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+            <CalendarDays className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-white/80">每周总结</div>
+            <div className="text-[10px] text-white/30">看趋势，不被单日体重吓到</div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+          {Array.from({ length: weekCount }, (_, i) => i + 1).map((week) => (
+            <button key={week} onClick={() => setState((prev) => ({ ...prev, selectedWeek: week }))}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all duration-200 active:scale-95 ${
+                selectedWeek === week ? "bg-accent text-white" : "bg-white/4 text-white/30 hover:bg-white/8"
+              }`}>
+              第{week}周
+            </button>
+          ))}
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <MetricCard title="最高足跟痛" value={`${weekStats.maxPain}/10`} sub="第二天别更痛" icon={Moon} tone={weekStats.maxPain >= 5 ? "warn" : "soft"} />
+        <MetricCard title="平均体重" value={weekStats.avgWeight != null ? `${weekStats.avgWeight.toFixed(1)} kg` : "—"} sub={weekStats.deltaVsPrev == null ? "上周数据不足" : weekStats.deltaVsPrev < 0 ? `比上周 ${Math.abs(weekStats.deltaVsPrev).toFixed(1)} kg` : `比上周 +${weekStats.deltaVsPrev.toFixed(1)} kg`} icon={Scale} tone={weekStats.deltaVsPrev != null && weekStats.deltaVsPrev < 0 ? "success" : "light"} />
+        <MetricCard title="平均步行" value={weekStats.avgWalk != null ? `${weekStats.avgWalk.toFixed(0)} 分钟` : "—"} sub="越稳定越重要" icon={Footprints} />
+        <MetricCard title="平均喝水" value={weekStats.avgWater != null ? `${weekStats.avgWater.toFixed(1)} L` : "—"} sub={`目标 ${profile.waterTarget} L`} icon={Droplets} />
+        <MetricCard title="执行率" value={`${weekStats.adherence || 0}%`} sub={`有记录 ${weekStats.loggedDays}/${weekDates.length} 天`} icon={CheckCircle2} tone={weekStats.adherence >= 70 ? "success" : "light"} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <MetricCard title="平均卡路里" value={weekStats.avgCalories != null ? `${Math.round(weekStats.avgCalories)} kcal` : "—"} sub="目标 ≤1500 kcal/天" icon={Flame} tone={weekStats.avgCalories > 1500 ? "warn" : "success"} />
         <MetricCard title="本周结论" value={weekStats.deltaVsPrev != null && weekStats.deltaVsPrev < 0 ? "在下降" : "继续稳住"} sub={weeklyHint} icon={TrendingDown} tone={weekStats.deltaVsPrev != null && weekStats.deltaVsPrev < 0 ? "success" : "light"} />
       </div>
-      <GlassCard><div className="mb-3 text-lg font-semibold">本周步行图</div><div className="h-60 w-full"><ResponsiveContainer width="100%" height="100%"><BarChart data={weekStats.rows}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="short" fontSize={12} /><YAxis fontSize={12} /><Tooltip /><Bar dataKey="walk" radius={[8,8,0,0]} /></BarChart></ResponsiveContainer></div></GlassCard>
-      <GlassCard><div className="mb-3 text-lg font-semibold">本周明细</div><div className="space-y-2">{weekStats.rows.map((row) => <button key={row.date} onClick={() => setState((prev) => ({ ...prev, selectedDate: row.date, activeTab: "checkin" }))} className="flex w-full items-center justify-between rounded-2xl bg-gray-50 px-3 py-3 text-left"><div><div className="font-medium">{row.short}</div><div className="text-xs text-gray-500">体重 {row.weight ?? "—"} · 步行 {row.walk} 分钟 · 喝水 {row.water} L</div></div><div className="rounded-full bg-white px-2 py-1 text-xs text-gray-600">得分 {row.score}/8</div></button>)}</div></GlassCard>
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+            <Footprints className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <span className="text-sm font-semibold text-white/80">本周步行图</span>
+        </div>
+        <div className="h-60 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={weekStats.rows}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+              <XAxis dataKey="short" fontSize={11} tick={{ fill: 'rgba(255,255,255,0.3)' }} />
+              <YAxis fontSize={11} tick={{ fill: 'rgba(255,255,255,0.3)' }} />
+              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', color: '#fff' }} />
+              <Bar dataKey="walk" radius={[6,6,0,0]} fill="#6366f1" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="glass rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft">
+            <CalendarDays className="h-3.5 w-3.5 text-accent" />
+          </div>
+          <span className="text-sm font-semibold text-white/80">本周明细</span>
+        </div>
+        <div className="space-y-1.5">
+          {weekStats.rows.map((row) => (
+            <button key={row.date} onClick={() => setState((prev) => ({ ...prev, selectedDate: row.date, activeTab: "today" }))}
+              className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-all duration-200 active:scale-[0.98] ${
+                row.score >= 5 ? "bg-success-soft border border-success/15" : "bg-white/3 border border-white/6 hover:bg-white/6"
+              }`}>
+              <div>
+                <div className="text-xs font-bold text-white/70">{row.short}</div>
+                <div className="text-[10px] text-white/30">体重 {row.weight ?? "—"} · 步行 {row.walk}分钟 · 卡路里 {row.calories}kcal</div>
+              </div>
+              <div className={`rounded-lg px-2 py-0.5 text-[10px] font-bold ${row.score >= 5 ? "bg-success/20 text-success" : "bg-white/6 text-white/30"}`}>
+                {row.score}/8
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 
+  // 加载状态显示空白或加载指示器，避免闪现首页
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-bg-primary text-white">
+        <div className="mx-auto max-w-md px-4 pb-28 pt-4">
+          <div className="flex h-96 items-center justify-center">
+            <div className="text-white/20">加载中...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
+    <div className="min-h-screen bg-bg-primary text-white">
       <div className="mx-auto max-w-md px-4 pb-28 pt-4">
-        {activeTab === "home" && <HomePage />}
-        {activeTab === "checkin" && (
-          <CheckinPage
+        {activeTab === "today" && (
+          <TodayPage
             profile={profile}
-            selectedDate={selectedDate}
-            selectedLog={selectedLog}
-            selectedIndex={selectedIndex}
+            selectedDate={activeDate}
+            selectedLog={activeLog}
+            selectedIndex={activeIndex}
             planDates={planDates}
-            selectedMinKcal={selectedMinKcal}
-            selectedMaxKcal={selectedMaxKcal}
-            selectedMealTotals={selectedMealTotals}
-            onUpdateLog={updateSelectedLog}
+            onUpdateLog={(patch, options = {}) => updateLogForDate(activeDate, patch, options)}
             onToggleExercise={toggleExerciseForDate}
-            onGoDate={goDate}
-            onSetSelectedDate={(date) => setState(prev => ({ ...prev, selectedDate: date }))}
+            onGoDate={handleGoDateForTodayPage}
+            onSetSelectedDate={handleSetSelectedDate}
+            onFinalizeDay={finalizeSelectedDay}
+            chartData={chartData}
+            currentWeight={currentWeight}
+            lossSoFar={lossSoFar}
+            planTitle={planTitle}
+            planEndDate={planEndDate}
+            homeDailyScore={homeDailyScore}
+            logs={logs}
+            cumulativeCalorieAdvice={cumulativeCalorieAdvice}
+            maxReachedDate={maxReachedDate}
+          />
+        )}
+        {activeTab === "water" && (
+          <WaterPage
+            profile={profile}
+            selectedDate={activeDate}
+            selectedLog={activeLog}
+            selectedIndex={activeIndex}
+            planDates={planDates}
+            onUpdateLog={(patch, options = {}) => updateLogForDate(activeDate, patch, options)}
+            onGoDate={handleGoDateForWaterPage}
+            maxReachedDate={maxReachedDate}
           />
         )}
         {activeTab === "plan" && <PlanPage />}
@@ -1037,19 +1263,166 @@ export default function App() {
             onExportData={exportData}
             onImportClick={() => importRef.current?.click()}
             onShowResetModal={() => setShowResetModal(true)}
+            onShowCorrectionModal={(items) => {
+              setCorrectionModalItems(items);
+              setShowCorrectionModal(true);
+            }}
             importRef={importRef}
             onImportData={importData}
+            theme={theme}
+            onToggleTheme={toggleTheme}
           />
         )}
       </div>
-      <div className="fixed bottom-0 left-0 right-0 border-t border-black/5 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex max-w-md items-center gap-2 px-4 py-3">
-          <NavButton active={activeTab === "home"} icon={Home} label="首页" onClick={() => setState((prev) => ({ ...prev, activeTab: "home", selectedDate: prev.activeDate }))} />
-          <NavButton active={activeTab === "checkin"} icon={ClipboardCheck} label="打卡" onClick={() => setState((prev) => ({ ...prev, activeTab: "checkin", selectedDate: prev.activeDate }))} />
-          <NavButton active={activeTab === "plan"} icon={Target} label="计划" onClick={() => setState((prev) => ({ ...prev, activeTab: "plan" }))} />
-          <NavButton active={activeTab === "weekly"} icon={BarChart3} label="周总结" onClick={() => setState((prev) => ({ ...prev, activeTab: "weekly", selectedWeek: currentWeek }))} />
-          <NavButton active={activeTab === "settings"} icon={Settings} label="设置" onClick={() => setState((prev) => ({ ...prev, activeTab: "settings" }))} />
+      
+      {/* 重新初始化确认模态框 */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-2xl">⚠️</div>
+              <div className="text-lg font-bold text-white">确认重新初始化？</div>
+              <div className="mt-2 text-sm text-white/40">
+                这将清空所有数据，回到第1天重新开始。此操作不可恢复！
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowResetModal(false)}
+                className="flex-1 rounded-xl bg-white/4 border border-white/8 px-4 py-3 font-semibold text-white/50 hover:bg-white/8 transition-all duration-200 active:scale-95">
+                取消
+              </button>
+              <button onClick={handleReset}
+                className="flex-1 rounded-xl bg-danger px-4 py-3 font-semibold text-white glow-danger transition-all duration-200 active:scale-95">
+                确认重置
+              </button>
+            </div>
+          </div>
         </div>
+      )}
+      
+      {/* 打卡完成成功弹窗 */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-4xl">🎉</div>
+              <div className="text-lg font-bold text-white">打卡完成！</div>
+              <div className="mt-2 text-sm text-white/40 whitespace-pre-line">
+                {successModalMessage}
+              </div>
+            </div>
+            <button onClick={() => setShowSuccessModal(false)}
+              className="w-full rounded-xl bg-success px-4 py-3 font-bold text-white glow-success transition-all duration-200 active:scale-95">
+              好的
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* 打卡未完成提示弹窗 */}
+      {showMissingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-4xl">📋</div>
+              <div className="text-lg font-bold text-white">还需完成以下项目：</div>
+              <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                {missingModalItems.map((item, idx) => (
+                  <span key={idx} className="rounded-full bg-warning-soft px-3 py-1 text-sm font-semibold text-warning">
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <button onClick={() => setShowMissingModal(false)}
+              className="w-full rounded-xl bg-white/4 border border-white/8 px-4 py-3 font-semibold text-white/50 hover:bg-white/8 transition-all duration-200 active:scale-95">
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* 切换下一天确认弹窗 */}
+      {showAdvanceDayModal && advanceDayTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-4xl">📅</div>
+              <div className="text-lg font-bold text-white">确认切换到下一天？</div>
+              <div className="mt-2 text-sm text-white/40">
+                {advanceDayIsFinalize
+                  ? `${selectedDate} 打卡已完成，确认切换到 ${advanceDayTarget} 吗？`
+                  : `将从 ${selectedDate} 切换到 ${advanceDayTarget}`}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowAdvanceDayModal(false); setAdvanceDayTarget(null); setAdvanceDayIsFinalize(false); }}
+                className="flex-1 rounded-xl bg-white/4 border border-white/8 px-4 py-3 font-semibold text-white/50 hover:bg-white/8 transition-all duration-200 active:scale-95">
+                取消
+              </button>
+              <button onClick={confirmAdvanceDay}
+                className="flex-1 rounded-xl bg-accent px-4 py-3 font-semibold text-white glow-accent transition-all duration-200 active:scale-95">
+                确认切换
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 导入数据结果弹窗 */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-4xl">{importModalType === 'success' ? '✅' : '❌'}</div>
+              <div className="text-lg font-bold text-white">
+                {importModalType === 'success' ? '导入成功' : '导入失败'}
+              </div>
+              <div className="mt-2 text-sm text-white/40">{importModalMessage}</div>
+            </div>
+            <button onClick={() => setShowImportModal(false)}
+              className={`w-full rounded-xl px-4 py-3 font-bold text-white transition-all duration-200 active:scale-95 ${
+                importModalType === 'success'
+                  ? 'bg-success glow-success'
+                  : 'bg-danger glow-danger'
+              }`}>
+              好的
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* 设置修正提示弹窗 */}
+      {showCorrectionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm rounded-3xl glass-elevated p-6 animate-scale-in">
+            <div className="mb-4 text-center">
+              <div className="mb-2 text-4xl">⚙️</div>
+              <div className="text-lg font-bold text-white">设置已自动修正</div>
+              <div className="mt-3 space-y-2">
+                {correctionModalItems.map((item, idx) => (
+                  <div key={idx} className="rounded-lg bg-warning-soft border border-warning/10 px-3 py-2 text-sm text-warning text-left">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button onClick={() => setShowCorrectionModal(false)}
+              className="w-full rounded-xl bg-white/4 border border-white/8 px-4 py-3 font-semibold text-white/50 hover:bg-white/8 transition-all duration-200 active:scale-95">
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
+      
+      <div className="fixed bottom-0 left-0 right-0 border-t border-white/5 bg-bg-primary/95 backdrop-blur-xl" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <nav className="mx-auto flex max-w-md items-center gap-1 px-3 py-2" aria-label="主导航">
+          <NavButton active={activeTab === "today"} icon={Home} label="首页" aria-current={activeTab === "today" ? "page" : undefined} onClick={() => setState((prev) => ({ ...prev, activeTab: "today" }))} />
+          <NavButton active={activeTab === "water"} icon={Droplets} label="喝水" aria-current={activeTab === "water" ? "page" : undefined} onClick={() => setState((prev) => ({ ...prev, activeTab: "water" }))} />
+          <NavButton active={activeTab === "plan"} icon={Target} label="计划" aria-current={activeTab === "plan" ? "page" : undefined} onClick={() => setState((prev) => ({ ...prev, activeTab: "plan" }))} />
+          <NavButton active={activeTab === "weekly"} icon={BarChart3} label="周总结" aria-current={activeTab === "weekly" ? "page" : undefined} onClick={() => setState((prev) => ({ ...prev, activeTab: "weekly", selectedWeek: currentWeek }))} />
+          <NavButton active={activeTab === "settings"} icon={Settings} label="设置" aria-current={activeTab === "settings" ? "page" : undefined} onClick={() => setState((prev) => ({ ...prev, activeTab: "settings" }))} />
+        </nav>
       </div>
     </div>
   );
