@@ -639,6 +639,7 @@ export default function App() {
       activeLog.lunchDone,
       activeLog.dinnerDone,
       anyExerciseDone(activeLog),
+      (activeLog.water || 0) * 1000 >= 1200,
     ];
     return { score: checks.filter(Boolean).length, max: checks.length };
   }, [activeLog]);
@@ -851,6 +852,7 @@ export default function App() {
         log.lunchDone,
         log.dinnerDone,
         anyExerciseDone(log),
+        (log.water || 0) * 1000 >= 1200,
       ];
       return {
         date: d,
@@ -874,7 +876,7 @@ export default function App() {
       loggedDays: weekDates.filter((d) => logs[d]?.weight !== "").length,
       prevAvg,
       deltaVsPrev: prevAvg != null && currAvg != null ? Number((currAvg - prevAvg).toFixed(1)) : null,
-      adherence: Math.round((summaryRows.reduce((a, b) => a + b.score, 0) / (summaryRows.length * 8 || 1)) * 100),
+      adherence: Math.round((summaryRows.reduce((a, b) => a + b.score, 0) / (summaryRows.length * 6 || 1)) * 100),
       rows: summaryRows,
     };
   }, [weekDates, logs, planDates, selectedWeek, profile.waterTarget]);
@@ -969,7 +971,7 @@ export default function App() {
 
         <div className="grid grid-cols-2 gap-3">
           <MetricCard title="7天平均体重" value={weeklyAvgNow != null ? `${weeklyAvgNow.toFixed(1)} kg` : "—"} sub={weeklyDelta == null ? "满2周后显示变化" : weeklyDelta < 0 ? `比上周 ${Math.abs(weeklyDelta).toFixed(1)} kg` : `比上周 +${weeklyDelta.toFixed(1)} kg`} icon={TrendingDown} />
-          <MetricCard title="今日完成度" value={`${homeDailyScore.score}/${homeDailyScore.max}`} sub={homeDailyScore.score >= 5 ? "联动正常" : "还有待办"} icon={CheckCircle2} tone={homeDailyScore.score >= 5 ? "success" : "light"} />
+          <MetricCard title="今日完成度" value={`${homeDailyScore.score}/${homeDailyScore.max}`} sub={homeDailyScore.score >= 6 ? "联动正常" : "还有待办"} icon={CheckCircle2} tone={homeDailyScore.score >= 6 ? "success" : "light"} />
         </div>
 
         <div className="glass rounded-2xl p-4">
@@ -1178,14 +1180,14 @@ export default function App() {
           {weekStats.rows.map((row) => (
             <button key={row.date} onClick={() => setState((prev) => ({ ...prev, selectedDate: row.date, activeTab: "today" }))}
               className={`flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-all duration-200 active:scale-[0.98] ${
-                row.score >= 5 ? "bg-success-soft border border-success/15" : "bg-white/3 border border-white/6 hover:bg-white/6"
+                row.score >= 6 ? "bg-success-soft border border-success/15" : "bg-surface-1 border border-border hover:bg-surface-2"
               }`}>
               <div>
                 <div className="text-xs font-bold text-white/70">{row.short}</div>
                 <div className="text-[10px] text-white/30">体重 {row.weight ?? "—"} · 步行 {row.walk}分钟 · 卡路里 {row.calories}kcal</div>
               </div>
-              <div className={`rounded-lg px-2 py-0.5 text-[10px] font-bold ${row.score >= 5 ? "bg-success/20 text-success" : "bg-white/6 text-white/30"}`}>
-                {row.score}/8
+              <div className={`rounded-lg px-2 py-0.5 text-[10px] font-bold ${row.score >= 6 ? "bg-success/20 text-success" : "bg-surface-1 text-text-muted"}`}>
+                {row.score}/6
               </div>
             </button>
           ))}

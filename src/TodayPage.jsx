@@ -33,10 +33,10 @@ function isDayComplete(log) {
 }
 
 function calcCompleted(log) {
-  return [log.weight !== "" && log.weight != null, log.breakfastDone, log.lunchDone, log.dinnerDone, anyExerciseDone(log)].filter(Boolean).length;
+  return [log.weight !== "" && log.weight != null, log.breakfastDone, log.lunchDone, log.dinnerDone, anyExerciseDone(log), (log.water || 0) * 1000 >= 1200].filter(Boolean).length;
 }
 
-const TOTAL_ITEMS = 5;
+const TOTAL_ITEMS = 6;
 
 function groupMealCalories(entries) {
   const totals = { breakfast: 0, lunch: 0, dinner: 0, snack: 0, total: 0 };
