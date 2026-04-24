@@ -249,6 +249,8 @@ export default function TodayPage({
         <div className="space-y-2">
           {MEAL_CONFIG.map(({ key, label, doneKey, icon, time }) => {
             const done = Boolean(selectedLog[doneKey]);
+            const mealEntries = (selectedLog.mealEntries || []).filter(e => e.mealType === key);
+            const mealKcal = mealEntries.reduce((sum, e) => sum + (e.kcalPerUnit || 0) * (e.qty || 1), 0);
             return (
               <button key={key} onClick={() => !done && openMealModal(key, label)} disabled={done}
                 className={`flex w-full items-center gap-3 rounded-xl px-4 py-3.5 transition-all duration-300 active:scale-[0.98] ${
@@ -257,17 +259,36 @@ export default function TodayPage({
                     : "bg-surface-1 border border-border hover:bg-surface-2 hover:border-surface-3"
                 }`}>
                 <span className="text-xl">{icon}</span>
-                <div className="flex-1 text-left">
-                  <div className={`text-sm font-semibold ${done ? "text-success" : "text-on-surface"}`}>{label}</div>
-                  <div className="text-[10px] text-hint">{time}点</div>
-                </div>
-                {done ? (
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success/20">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-semibold ${done ? "text-success" : "text-on-surface"}`}>{label}</span>
+                    <span className="text-[10px] text-hint">{time}点</span>
                   </div>
-                ) : (
-                  <div className="rounded-full bg-surface-2 px-3 py-1 text-[10px] font-semibold text-text-muted">打卡</div>
-                )}
+                  {mealEntries.length > 0 ? (
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      {mealEntries.map((entry) => (
+                        <span key={entry.id} className="inline-flex items-center gap-1 rounded-md bg-surface-2 px-1.5 py-0.5 text-[10px]">
+                          <span className="text-text-secondary truncate max-w-[80px]">{entry.name}</span>
+                          <span className="text-warning font-bold">{entry.kcalPerUnit}kcal</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : done ? (
+                    <div className="mt-1 text-[10px] text-text-muted">未记录食物</div>
+                  ) : null}
+                </div>
+                <div className="flex flex-col items-end shrink-0">
+                  {mealKcal > 0 && (
+                    <div className="text-xs font-bold text-warning">{mealKcal}<span className="text-[9px] text-text-muted ml-0.5">kcal</span></div>
+                  )}
+                  {done ? (
+                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-success/20 mt-0.5">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    </div>
+                  ) : (
+                    <div className="rounded-full bg-surface-2 px-3 py-1 text-[10px] font-semibold text-text-muted mt-0.5">打卡</div>
+                  )}
+                </div>
               </button>
             );
           })}
