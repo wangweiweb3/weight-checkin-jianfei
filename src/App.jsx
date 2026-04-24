@@ -401,7 +401,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState(false);
 
   const syncToCloud = async (data) => {
-    if (!CLOUD_SYNC_ENABLED || isSyncing || !API_BASE_URL) return;
+    if (!CLOUD_SYNC_ENABLED || isSyncing) return;
     setIsSyncing(true);
     setSyncStatus('syncing');
     setSyncError('');
@@ -410,7 +410,7 @@ export default function App() {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
+      const response = await fetch(`/api/data?userId=${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -440,7 +440,7 @@ export default function App() {
   };
 
   const syncFromCloud = async () => {
-    if (!CLOUD_SYNC_ENABLED || isSyncing || !API_BASE_URL) return;
+    if (!CLOUD_SYNC_ENABLED || isSyncing) return;
     setIsSyncing(true);
     setSyncStatus('loading');
     setSyncError('');
@@ -449,7 +449,7 @@ export default function App() {
     const timeoutId = setTimeout(() => controller.abort(), 10000);
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/data?userId=${userId}`, {
+      const response = await fetch(`/api/data?userId=${userId}`, {
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
